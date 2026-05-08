@@ -1,0 +1,14 @@
+{
+  "name": "alarm-sinai",
+  "version": "1.0.0",
+  "description": "Alarm Sinai — Node.js backend for Pima alarm via Schneider M221 PLC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "firebase-admin": "^12.0.0",
+    "modbus-serial": "^8.0.16"
+  }
+}

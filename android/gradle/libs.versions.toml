@@ -1,0 +1,36 @@
+[versions]
+agp             = "8.3.2"
+kotlin          = "1.9.23"
+coreKtx         = "1.13.1"
+lifecycleRuntimeKtx = "2.8.0"
+activityCompose = "1.9.0"
+composeBom      = "2024.05.00"
+retrofit        = "2.11.0"
+okhttp          = "4.12.0"
+gson            = "2.10.1"
+firebaseBom     = "33.1.0"
+googleServices  = "4.4.2"
+coroutines      = "1.8.1"
+
+[libraries]
+core-ktx                = { group = "androidx.core",            name = "core-ktx",                        version.ref = "coreKtx"         }
+lifecycle-runtime-ktx   = { group = "androidx.lifecycle",       name = "lifecycle-runtime-ktx",           version.ref = "lifecycleRuntimeKtx" }
+lifecycle-viewmodel-compose = { group = "androidx.lifecycle",   name = "lifecycle-viewmodel-compose",     version.ref = "lifecycleRuntimeKtx" }
+activity-compose        = { group = "androidx.activity",        name = "activity-compose",                version.ref = "activityCompose" }
+compose-bom             = { group = "androidx.compose",         name = "compose-bom",                     version.ref = "composeBom"      }
+compose-ui              = { group = "androidx.compose.ui",      name = "ui"                                                               }
+compose-ui-graphics     = { group = "androidx.compose.ui",      name = "ui-graphics"                                                      }
+compose-material3       = { group = "androidx.compose.material3", name = "material3"                                                      }
+compose-material-icons  = { group = "androidx.compose.material", name = "material-icons-extended"                                         }
+retrofit                = { group = "com.squareup.retrofit2",   name = "retrofit",                        version.ref = "retrofit"        }
+retrofit-gson           = { group = "com.squareup.retrofit2",   name = "converter-gson",                  version.ref = "retrofit"        }
+okhttp-logging          = { group = "com.squareup.okhttp3",     name = "logging-interceptor",             version.ref = "okhttp"          }
+gson                    = { group = "com.google.code.gson",     name = "gson",                            version.ref = "gson"            }
+firebase-bom            = { group = "com.google.firebase",      name = "firebase-bom",                    version.ref = "firebaseBom"     }
+firebase-messaging      = { group = "com.google.firebase",      name = "firebase-messaging-ktx"                                           }
+coroutines-android      = { group = "org.jetbrains.kotlinx",    name = "kotlinx-coroutines-android",      version.ref = "coroutines"      }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp"           }
+kotlin-android      = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin"   }
+google-services     = { id = "com.google.gms.google-services", version.ref = "googleServices" }
