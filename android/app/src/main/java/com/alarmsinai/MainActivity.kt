@@ -4,8 +4,10 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -94,7 +96,11 @@ private fun AlarmApp(
     playAlarm: () -> Unit,
     stopAlarm: () -> Unit
 ) {
-    val status by vm.status.collectAsState()
+    val status     by vm.status.collectAsState()
+    val mw1Running by vm.mw1Running.collectAsState()
+    val mw2Running by vm.mw2Running.collectAsState()
+    val mw1 = status?.mw1 ?: 0
+    val mw2 = status?.mw2 ?: 0
     var selectedTab by remember { mutableIntStateOf(0) }
     var wasAlarm by remember { mutableStateOf(false) }
 
@@ -106,6 +112,17 @@ private fun AlarmApp(
             !isAlarm && wasAlarm -> stopAlarm()
         }
         wasAlarm = isAlarm
+    }
+
+    // Tick sound every second while timer is counting
+    val timerValue = if (mw2Running) mw2 else if (mw1Running) mw1 else -1
+    LaunchedEffect(timerValue) {
+        if (timerValue > 0) {
+            val tone = ToneGenerator(AudioManager.STREAM_ALARM, 60)
+            tone.startTone(ToneGenerator.TONE_PROP_BEEP, 80)
+            kotlinx.coroutines.delay(150)
+            tone.release()
+        }
     }
 
     // Request DND access once so the notification channel can bypass it
