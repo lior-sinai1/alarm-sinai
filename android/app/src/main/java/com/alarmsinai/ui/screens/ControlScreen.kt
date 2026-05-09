@@ -46,22 +46,18 @@ fun ControlScreen(vm: AlarmViewModel) {
         ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
-    if (mw2Running) {
-        TimerScreen(seconds = mw2, label = "דלת כניסה")
-    } else if (mw1Running) {
-        TimerScreen(seconds = mw1, label = "מתחבר בעוד")
-    } else {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            ConnectionBadge(connected = !error && status?.connected == true)
-            StatusCard(status, breachedSensors)
-            ZoneButtons(status, vm, alarm, armed)
-        }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        ConnectionBadge(connected = !error && status?.connected == true)
+        StatusCard(status, breachedSensors)
+        if (mw1Running) TimerRow(seconds = mw1, label = "מתחבר בעוד")
+        if (mw2Running) TimerRow(seconds = mw2, label = "דלת כניסה")
+        ZoneButtons(status, vm, alarm, armed)
     }
 
     cmdErr?.let { msg ->
@@ -76,20 +72,26 @@ fun ControlScreen(vm: AlarmViewModel) {
 }
 
 @Composable
-private fun TimerScreen(seconds: Int, label: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+private fun TimerRow(seconds: Int, label: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, color = AlarmOrange, fontSize = 18.sp)
+            Text(label, fontSize = 18.sp, color = AlarmOrange)
             Text(
-                text = "$seconds",
-                fontSize = 112.sp,
+                text = "$seconds שניות",
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = AlarmOrange
             )
-            Text("שניות", color = AlarmOrange, fontSize = 18.sp)
         }
     }
 }
