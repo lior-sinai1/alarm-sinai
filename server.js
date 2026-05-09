@@ -17,6 +17,15 @@ const PORT                = 3000;
 const TOKENS_FILE         = path.join(__dirname, 'fcm-tokens.json');
 const SERVICE_ACCOUNT_FILE = path.join(__dirname, 'firebase-service-account.json');
 
+// ─── Bypass map: sensor coil address → bypass coil (M50–M75) ─────────────────
+const BYPASS_MAP = {
+  182: 50, 201: 51, 202: 52, 203: 53, 204: 54,
+  205: 55, 206: 56, 207: 57, 208: 58, 209: 59,
+  210: 60, 211: 61, 212: 62, 213: 63, 214: 64,
+  215: 65, 216: 66, 217: 67, 218: 68, 219: 69,
+  222: 75,
+};
+
 // ─── Sensor map: Modbus coil address → display name ───────────────────────────
 const SENSOR_MAP = {
   182: 'דלת כניסה',
@@ -104,7 +113,7 @@ client.on('close', () => {
 });
 
 // ─── Status cache & polling ───────────────────────────────────────────────────
-let cachedStatus = { ok: false, connected: false, m175: 0, m19: 0, mw1: 0, sensors: {} };
+let cachedStatus = { ok: false, connected: false, m175: 0, m19: 0, mw1: 0, sensors: {}, bypasses: {} };
 let prevM175 = null;
 let prevM19  = null;
 
@@ -125,6 +134,13 @@ async function readStatus() {
     sensors[addr] = sensorBlock.data[idx] ? 1 : 0;
   }
 
+  // Bypass coils M50–M75 (read 26 coils; M70–M74 unused)
+  const bypassBlock = await client.readCoils(50, 26);
+  const bypasses = {};
+  for (const [sensorAddr, bypassCoil] of Object.entries(BYPASS_MAP)) {
+    bypasses[sensorAddr] = bypassBlock.data[bypassCoil - 50] ? 1 : 0;
+  }
+
   return {
     ok: true,
     connected: true,
@@ -132,6 +148,7 @@ async function readStatus() {
     m19:  alarm.data[0] ? 1 : 0,
     mw1:  timerReg.data[0],
     sensors,
+    bypasses,
   };
 }
 
@@ -235,6 +252,23 @@ app.post('/disarm', async (_req, res) => {
     return res.status(503).json({ ok: false, error: 'PLC not connected' });
   try {
     await pulse(13);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /write-coil  { coil: 50, value: true }
+app.post('/write-coil', async (req, res) => {
+  const coil  = Number(req.body?.coil);
+  const value = Boolean(req.body?.value);
+  const validBypassCoils = new Set(Object.values(BYPASS_MAP));
+  if (!validBypassCoils.has(coil))
+    return res.status(400).json({ ok: false, error: 'coil not in allowed bypass range' });
+  if (!connected)
+    return res.status(503).json({ ok: false, error: 'PLC not connected' });
+  try {
+    await client.writeCoil(coil, value);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

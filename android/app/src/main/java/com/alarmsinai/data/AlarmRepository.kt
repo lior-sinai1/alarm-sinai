@@ -6,6 +6,7 @@ import com.alarmsinai.data.model.ArmRequest
 import com.alarmsinai.data.model.HistoryEvent
 import com.alarmsinai.data.model.StatusResponse
 import com.alarmsinai.data.model.TokenRequest
+import com.alarmsinai.data.model.WriteCoilRequest
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import okhttp3.OkHttpClient
@@ -50,6 +51,9 @@ class AlarmRepository(context: Context) {
 
     suspend fun registerToken(token: String) =
         buildApi().registerToken(TokenRequest(token))
+
+    suspend fun writeCoil(coil: Int, value: Boolean) =
+        buildApi().writeCoil(WriteCoilRequest(coil, value))
 
     // ── History persistence ───────────────────────────────────────────────────
     fun loadHistory(): MutableList<HistoryEvent> {

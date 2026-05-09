@@ -8,12 +8,22 @@ data class StatusResponse(
     val m175: Int,
     val m19: Int,
     val mw1: Int,
-    val sensors: Map<String, Int>
+    val sensors: Map<String, Int>,
+    val bypasses: Map<String, Int> = emptyMap()
 )
 
 data class ArmRequest(@SerializedName("zone") val zone: Int)
 data class TokenRequest(@SerializedName("token") val token: String)
+data class WriteCoilRequest(@SerializedName("coil") val coil: Int, @SerializedName("value") val value: Boolean)
 data class GenericResponse(val ok: Boolean, val error: String? = null)
+
+val SENSOR_BYPASS_MAP: Map<String, Int> = mapOf(
+    "182" to 50, "201" to 51, "202" to 52, "203" to 53, "204" to 54,
+    "205" to 55, "206" to 56, "207" to 57, "208" to 58, "209" to 59,
+    "210" to 60, "211" to 61, "212" to 62, "213" to 63, "214" to 64,
+    "215" to 65, "216" to 66, "217" to 67, "218" to 68, "219" to 69,
+    "222" to 75
+)
 
 data class HistoryEvent(
     val type: String,       // "alarm" | "arm" | "disarm"
