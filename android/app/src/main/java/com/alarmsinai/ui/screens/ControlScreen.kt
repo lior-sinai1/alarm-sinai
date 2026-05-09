@@ -85,12 +85,12 @@ private fun TimerRow(seconds: Int, label: String) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, fontSize = 18.sp, color = AlarmOrange)
+            Text(label, fontSize = 18.sp, color = AlarmGreen)
             Text(
                 text = "$seconds שניות",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = AlarmOrange
+                color = AlarmGreen
             )
         }
     }
