@@ -34,19 +34,21 @@ fun ControlScreen(vm: AlarmViewModel) {
     val cmdErr   by vm.commandError.collectAsState()
     val disabled by vm.disabledSensors.collectAsState()
 
-    val alarm = status?.m19 == 1
-    val armed = status?.m175 == 1
-    val mw1   = status?.mw1 ?: 0
-    val mw2   = status?.mw2 ?: 0
+    val alarm      = status?.m19 == 1
+    val armed      = status?.m175 == 1
+    val mw1        = status?.mw1 ?: 0
+    val mw2        = status?.mw2 ?: 0
+    val mw1Running by vm.mw1Running.collectAsState()
+    val mw2Running by vm.mw2Running.collectAsState()
 
     val breachedSensors = status?.sensors
         ?.filter { it.value == 1 && it.key !in disabled }
         ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
-    if (mw2 > 0) {
+    if (mw2Running) {
         TimerScreen(seconds = mw2, label = "דלת כניסה")
-    } else if (mw1 > 0) {
+    } else if (mw1Running) {
         TimerScreen(seconds = mw1, label = "מתחבר בעוד")
     } else {
         Column(

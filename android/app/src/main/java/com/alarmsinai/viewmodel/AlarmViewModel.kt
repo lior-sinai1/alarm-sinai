@@ -38,9 +38,18 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     private val _commandError = MutableStateFlow<String?>(null)
     val commandError: StateFlow<String?> = _commandError.asStateFlow()
 
+    // ── Timer running flags ───────────────────────────────────────────────────
+    private val _mw1Running = MutableStateFlow(false)
+    val mw1Running: StateFlow<Boolean> = _mw1Running.asStateFlow()
+
+    private val _mw2Running = MutableStateFlow(false)
+    val mw2Running: StateFlow<Boolean> = _mw2Running.asStateFlow()
+
     private var pollJob: Job? = null
     private var prevM175: Int? = null
     private var prevM19: Int? = null
+    private var prevMw1: Int? = null
+    private var prevMw2: Int? = null
 
     init {
         _history.value = repository.loadHistory()
@@ -73,6 +82,15 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
             addHistoryEvent("alarm", "אזעקה!", "פריצה — מערכת האזעקה הופעלה!")
         prevM175 = s.m175
         prevM19  = s.m19
+
+        // Timer active only when value is actively decreasing
+        val p1 = prevMw1; if (s.mw1 == 0) _mw1Running.value = false
+                          else if (p1 != null && s.mw1 < p1) _mw1Running.value = true
+        val p2 = prevMw2; if (s.mw2 == 0) _mw2Running.value = false
+                          else if (p2 != null && s.mw2 < p2) _mw2Running.value = true
+        prevMw1 = s.mw1
+        prevMw2 = s.mw2
+
         // Sync disabled-sensors display set from PLC bypass state
         val bypassed = s.bypasses.filter { it.value == 1 }.keys.toSet()
         _disabledSensors.value = bypassed
