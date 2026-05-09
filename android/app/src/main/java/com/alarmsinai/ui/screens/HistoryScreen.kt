@@ -74,12 +74,14 @@ fun HistoryScreen(vm: AlarmViewModel) {
 
 @Composable
 private fun HistoryItem(event: HistoryEvent) {
-    val (icon, color): Pair<ImageVector, Color> = when (event.type) {
-        "alarm"   -> Icons.Default.Notifications to AlarmRed
-        "arm"     -> Icons.Default.Lock to AlarmGreen
-        "disarm"  -> Icons.Default.LockOpen to AlarmGray
-        else      -> Icons.Default.Notifications to AlarmGray
+    val pair = when (event.type) {
+        "alarm"  -> Icons.Default.Notifications to AlarmRed
+        "arm"    -> Icons.Default.Lock          to AlarmGreen
+        "disarm" -> Icons.Default.LockOpen      to AlarmGray
+        else     -> Icons.Default.Notifications to AlarmGray
     }
+    val icon  = pair.first
+    val color = pair.second
     val fmt = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
 
     Card(
