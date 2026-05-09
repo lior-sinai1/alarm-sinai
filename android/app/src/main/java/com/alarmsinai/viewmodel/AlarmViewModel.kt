@@ -70,10 +70,6 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     private fun detectChanges(s: StatusResponse) {
         if (prevM19 == 0 && s.m19 == 1)
             addHistoryEvent("alarm", "אזעקה!", "פריצה — מערכת האזעקה הופעלה!")
-        if (prevM175 == 0 && s.m175 == 1)
-            addHistoryEvent("arm", "מערכת דרוכה", "המערכת נדרכה בהצלחה")
-        if (prevM175 == 1 && s.m175 == 0)
-            addHistoryEvent("disarm", "מערכת מנוטרלת", "המערכת נוטרלה")
         prevM175 = s.m175
         prevM19  = s.m19
     }
