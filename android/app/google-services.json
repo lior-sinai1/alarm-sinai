@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "alarm-sinai-placeholder",
-    "storage_bucket": "alarm-sinai-placeholder.appspot.com"
+    "project_number": "896733490478",
+    "project_id": "alarm-b6b88",
+    "storage_bucket": "alarm-b6b88.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:896733490478:android:b0bcee266f98453da21ebf",
         "android_client_info": {
           "package_name": "com.alarmsinai"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "placeholder_api_key"
+          "current_key": "AIzaSyB0xL3AB2X7sfAuckP7tgBep0fMPs5UBa4"
         }
       ],
       "services": {
