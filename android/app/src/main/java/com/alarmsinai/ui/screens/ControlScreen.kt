@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,27 +34,29 @@ fun ControlScreen(vm: AlarmViewModel) {
     val cmdErr   by vm.commandError.collectAsState()
     val disabled by vm.disabledSensors.collectAsState()
 
-    // Breached sensors (visible only)
+    val alarm = status?.m19 == 1
+    val armed = status?.m175 == 1
+    val timer = status?.mw1 ?: 0
+
     val breachedSensors = status?.sensors
         ?.filter { it.value == 1 && it.key !in disabled }
-        ?.mapNotNull { SENSOR_NAMES[it.key]?.let { name -> name } }
+        ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Connection indicator
-        ConnectionBadge(connected = !error && status?.connected == true)
-
-        // Main status card
-        StatusCard(status, breachedSensors)
-
-        // Zone buttons
-        ZoneButtons(status, vm)
+    if (timer > 0) {
+        TimerScreen(timer)
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ConnectionBadge(connected = !error && status?.connected == true)
+            StatusCard(status, breachedSensors)
+            ZoneButtons(status, vm, alarm, armed)
+        }
     }
 
     cmdErr?.let { msg ->
@@ -70,6 +71,25 @@ fun ControlScreen(vm: AlarmViewModel) {
 }
 
 @Composable
+private fun TimerScreen(seconds: Int) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("מתחבר בעוד", color = AlarmOrange, fontSize = 18.sp)
+            Text(
+                text = "$seconds",
+                fontSize = 112.sp,
+                fontWeight = FontWeight.Bold,
+                color = AlarmOrange
+            )
+            Text("שניות", color = AlarmOrange, fontSize = 18.sp)
+        }
+    }
+}
+
+@Composable
 private fun ConnectionBadge(connected: Boolean) {
     val color = if (connected) AlarmGreen else AlarmRed
     val label = if (connected) "מחובר" else "לא מחובר"
@@ -78,7 +98,9 @@ private fun ConnectionBadge(connected: Boolean) {
         horizontalArrangement = Arrangement.End,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Box(Modifier.size(10.dp).background(color, RoundedCornerShape(50)))
+        androidx.compose.foundation.Canvas(Modifier.size(10.dp)) {
+            drawCircle(color = color)
+        }
         Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 12.sp, color = color)
     }
@@ -86,21 +108,19 @@ private fun ConnectionBadge(connected: Boolean) {
 
 @Composable
 private fun StatusCard(status: StatusResponse?, breachedSensors: List<String>) {
-    val alarm  = status?.m19 == 1
-    val armed  = status?.m175 == 1
-    val timer  = status?.mw1 ?: 0
+    val alarm = status?.m19 == 1
+    val armed = status?.m175 == 1
 
     val (text, color) = when {
-        status == null  -> "מתחבר..." to AlarmGray
-        alarm           -> "אזעקה!" to AlarmRed
-        armed && timer > 0 -> "מערכת דרוכה\n${timer} שניות" to AlarmGreen
-        armed           -> "מערכת דרוכה" to AlarmGreen
+        status == null               -> "מתחבר..." to AlarmGray
+        alarm                        -> "אזעקה!" to AlarmRed
+        armed                        -> "מערכת דרוכה" to AlarmGreen
         breachedSensors.isNotEmpty() -> breachedSensors.joinToString("\n") to AlarmOrange
-        else            -> "מערכת מוכנה" to AlarmGray
+        else                         -> "מערכת מוכנה" to AlarmGray
     }
 
     val infinite = rememberInfiniteTransition(label = "blink")
-    val alpha by if (alarm) {
+    val blinkAlpha by if (alarm) {
         infinite.animateFloat(
             initialValue = 1f, targetValue = 0.15f, label = "blink",
             animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse)
@@ -110,13 +130,17 @@ private fun StatusCard(status: StatusResponse?, breachedSensors: List<String>) {
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().height(160.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp)
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize().alpha(if (alarm) alpha else 1f),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp, horizontal = 16.dp)
+                .alpha(if (alarm) blinkAlpha else 1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = text,
@@ -124,33 +148,45 @@ private fun StatusCard(status: StatusResponse?, breachedSensors: List<String>) {
                 fontWeight = FontWeight.Bold,
                 color = color,
                 textAlign = TextAlign.Center,
-                lineHeight = 40.sp,
-                modifier = Modifier.padding(16.dp)
+                lineHeight = 40.sp
             )
+            if (alarm && breachedSensors.isNotEmpty()) {
+                Text(
+                    text = breachedSensors.joinToString(" · "),
+                    fontSize = 15.sp,
+                    color = AlarmOrange,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ZoneButtons(status: StatusResponse?, vm: AlarmViewModel) {
-    val armed = status?.m175 == 1
-    val zones = listOf(
-        9  to "היקפית",
-        10 to "נפח",
-        11 to "קומה א'",
-        12 to "כללית"
-    )
-    val btnColor = if (armed) AlarmRed else AlarmGreen
+private fun ZoneButtons(
+    status: StatusResponse?,
+    vm: AlarmViewModel,
+    alarm: Boolean,
+    armed: Boolean
+) {
+    val zones = listOf(9 to "היקפית", 10 to "נפח", 11 to "קומה א'", 12 to "כללית")
+
+    val btnColor = when {
+        alarm -> AlarmRed
+        armed -> AlarmGreen
+        else  -> AlarmGray
+    }
+
+    val hint = if (armed || alarm) "לחץ לנטרול" else "בחר מעגל לדריכה"
 
     Text(
-        if (armed) "לחץ לנטרול" else "בחר מעגל לדריכה",
+        hint,
         style = MaterialTheme.typography.titleSmall,
         color = Color.Gray,
         modifier = Modifier.fillMaxWidth(),
         textAlign = TextAlign.Center
     )
 
-    // 2x2 grid of big buttons
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         zones.chunked(2).forEach { row ->
             Row(
@@ -160,12 +196,12 @@ private fun ZoneButtons(status: StatusResponse?, vm: AlarmViewModel) {
                 row.forEach { (zone, label) ->
                     Button(
                         onClick = { vm.toggleZone(zone) },
-                        modifier = Modifier.weight(1f).height(90.dp),
+                        modifier = Modifier.weight(1f).height(88.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = btnColor),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            label,
+                            if (armed || alarm) "נטרל" else label,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )

@@ -1,6 +1,13 @@
 package com.alarmsinai
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.media.AudioAttributes
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -13,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import com.alarmsinai.ui.screens.ControlScreen
 import com.alarmsinai.ui.screens.HistoryScreen
 import com.alarmsinai.ui.screens.SensorsScreen
@@ -23,37 +31,94 @@ import com.google.firebase.messaging.FirebaseMessaging
 class MainActivity : ComponentActivity() {
 
     private val vm: AlarmViewModel by viewModels()
+    private var alarmRingtone: Ringtone? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setupAlarmChannel()
 
-        // Register FCM token on first launch
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            vm.registerFcmToken(token)
-        }
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { vm.registerFcmToken(it) }
 
         setContent {
             AlarmSinaiTheme {
-                AlarmApp(vm)
+                AlarmApp(vm, ::playAlarmSound, ::stopAlarmSound)
             }
         }
     }
 
-    override fun onResume()  { super.onResume();  vm.startPolling() }
-    override fun onPause()   { super.onPause();   vm.stopPolling()  }
+    private fun setupAlarmChannel() {
+        val nm = getSystemService(NotificationManager::class.java)
+        val ch = NotificationChannel("alarm_channel", "התרעות אזעקה", NotificationManager.IMPORTANCE_HIGH).apply {
+            setBypassDnd(true)
+            enableVibration(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+        nm.createNotificationChannel(ch)
+    }
+
+    fun playAlarmSound() {
+        if (alarmRingtone?.isPlaying == true) return
+        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        alarmRingtone = RingtoneManager.getRingtone(this, uri)?.apply {
+            audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            isLooping = true
+            play()
+        }
+    }
+
+    fun stopAlarmSound() {
+        alarmRingtone?.stop()
+        alarmRingtone = null
+    }
+
+    override fun onResume() { super.onResume(); vm.startPolling() }
+    override fun onPause()  { super.onPause();  vm.stopPolling()  }
+    override fun onDestroy() { super.onDestroy(); stopAlarmSound() }
 }
 
 private data class TabItem(val label: String, val icon: ImageVector)
 
 private val TABS = listOf(
-    TabItem("בקרה",   Icons.Default.Home),
-    TabItem("היסטוריה", Icons.Default.List),
-    TabItem("חיישנים", Icons.Default.Settings),
+    TabItem("בקרה",      Icons.Default.Home),
+    TabItem("היסטוריה",  Icons.Default.List),
+    TabItem("חיישנים",   Icons.Default.Settings),
 )
 
 @Composable
-private fun AlarmApp(vm: AlarmViewModel) {
+private fun AlarmApp(
+    vm: AlarmViewModel,
+    playAlarm: () -> Unit,
+    stopAlarm: () -> Unit
+) {
+    val status by vm.status.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
+    var wasAlarm by remember { mutableStateOf(false) }
+
+    // Local audio alert — bypasses silent/DND via USAGE_ALARM
+    LaunchedEffect(status?.m19) {
+        val isAlarm = status?.m19 == 1
+        when {
+            isAlarm && !wasAlarm -> playAlarm()
+            !isAlarm && wasAlarm -> stopAlarm()
+        }
+        wasAlarm = isAlarm
+    }
+
+    // Request DND access once so the notification channel can bypass it
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        val nm = context.getSystemService(NotificationManager::class.java)
+        if (!nm.isNotificationPolicyAccessGranted) {
+            context.startActivity(
+                android.content.Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -74,7 +139,6 @@ private fun AlarmApp(vm: AlarmViewModel) {
             1 -> HistoryScreen(vm = vm)
             2 -> SensorsScreen(vm = vm)
         }
-        // consume insets
         androidx.compose.foundation.layout.Box(Modifier.padding(padding)) {}
     }
 }
