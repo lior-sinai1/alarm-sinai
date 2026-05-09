@@ -75,7 +75,7 @@ class AlarmRepository(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_URL = "http://192.168.1.92:3000"
+        const val DEFAULT_URL = "https://demystify-unplug-sassy.ngrok-free.dev"
         private const val KEY_HISTORY = "history"
         private const val KEY_DISABLED_SENSORS = "disabled_sensors"
     }
