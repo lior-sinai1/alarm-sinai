@@ -31,17 +31,21 @@ class AlarmMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        val title = message.notification?.title ?: message.data["title"] ?: return
-        val body  = message.notification?.body  ?: message.data["body"]  ?: ""
-        val type  = message.data["type"] ?: ""
+        val title = message.data["title"] ?: return
+        val body  = message.data["body"]  ?: ""
+        val type  = message.data["type"]  ?: ""
 
         ensureChannels()
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        val pending = PendingIntent.getActivity(
+        val tapIntent = PendingIntent.getActivity(
             this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val fullScreenIntent = PendingIntent.getActivity(
+            this, 1, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -50,10 +54,14 @@ class AlarmMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.drawable.ic_alarm)
             .setContentTitle(title)
             .setContentText(body)
-            .setContentIntent(pending)
+            .setContentIntent(tapIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .apply {
+                if (type == "alarm") setFullScreenIntent(fullScreenIntent, true)
+            }
             .build()
 
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

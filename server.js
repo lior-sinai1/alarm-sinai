@@ -192,17 +192,8 @@ async function sendPush(title, body, type) {
     try {
       await admin.messaging().send({
         token,
-        notification: { title, body },
-        android: {
-          priority: 'high',
-          notification: {
-            channelId: 'alarm_channel',
-            sound: type === 'alarm' ? 'alarm_sound' : 'default',
-            priority: 'max',
-            visibility: 'public',
-          },
-        },
-        data: { type },
+        data: { title, body, type },
+        android: { priority: 'high' },
       });
     } catch (err) {
       console.error('FCM error [%s]:', token.slice(-8), err.message);
