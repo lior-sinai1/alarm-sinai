@@ -54,7 +54,7 @@ fun ControlScreen(vm: AlarmViewModel) {
     }
 
     val breachedSensors = status?.sensors
-        ?.filter { it.value == 1 && it.key !in disabled }
+        ?.filter { it.value == 0 && it.key !in disabled }
         ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
@@ -68,26 +68,8 @@ fun ControlScreen(vm: AlarmViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            ConnectionBadge(connected = !error && status?.connected == true)
-            if (bypassedSensors.isNotEmpty()) {
-                Column(horizontalAlignment = Alignment.End) {
-                    bypassedSensors.forEach { name ->
-                        Text(
-                            text = "⛔ $name",
-                            fontSize = 11.sp,
-                            color = AlarmRed,
-                            textAlign = TextAlign.End
-                        )
-                    }
-                }
-            }
-        }
-        StatusCard(status, breachedSensors, mw1Running, mw1)
+        ConnectionBadge(connected = !error && status?.connected == true)
+        StatusCard(status, breachedSensors, bypassedSensors, mw1Running, mw1)
         if (mw2Running) TimerRow(seconds = mw2, label = "דלת כניסה")
         ZoneButtons(status, vm, alarm, armed)
     }
@@ -149,6 +131,7 @@ private fun ConnectionBadge(connected: Boolean) {
 private fun StatusCard(
     status: StatusResponse?,
     breachedSensors: List<String>,
+    bypassedSensors: List<String> = emptyList(),
     mw1Running: Boolean = false,
     mw1: Int = 0
 ) {
@@ -202,6 +185,20 @@ private fun StatusCard(
                     color = AlarmOrange,
                     textAlign = TextAlign.Center
                 )
+            }
+            if (bypassedSensors.isNotEmpty()) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 8.dp),
+                    color = AlarmRed.copy(alpha = 0.3f)
+                )
+                bypassedSensors.forEach { name ->
+                    Text(
+                        text = "⛔ $name",
+                        fontSize = 11.sp,
+                        color = AlarmRed,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
