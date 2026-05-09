@@ -78,8 +78,13 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     fun stopPolling() { pollJob?.cancel() }
 
     private fun detectChanges(s: StatusResponse) {
-        if (prevM19 == 0 && s.m19 == 1)
-            addHistoryEvent("alarm", "אזעקה!", "פריצה — מערכת האזעקה הופעלה!")
+        if (prevM19 == 0 && s.m19 == 1) {
+            val breached = s.sensors.filter { it.value == 1 }
+                .mapNotNull { SENSOR_NAMES[it.key] }
+            val body = if (breached.isEmpty()) "פריצה — מערכת האזעקה הופעלה!"
+                       else "פריצה: ${breached.joinToString(", ")}"
+            addHistoryEvent("alarm", "אזעקה!", body)
+        }
         prevM175 = s.m175
         prevM19  = s.m19
 
