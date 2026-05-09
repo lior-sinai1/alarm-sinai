@@ -88,11 +88,16 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         prevM175 = s.m175
         prevM19  = s.m19
 
-        // Timer active only when value is actively decreasing
-        val p1 = prevMw1; if (s.mw1 == 0) _mw1Running.value = false
-                          else if (p1 != null && s.mw1 < p1) _mw1Running.value = true
-        val p2 = prevMw2; if (s.mw2 == 0) _mw2Running.value = false
-                          else if (p2 != null && s.mw2 < p2) _mw2Running.value = true
+        // Reset timers immediately when system is disarmed
+        if (s.m175 == 0) {
+            _mw1Running.value = false
+            _mw2Running.value = false
+        } else {
+            val p1 = prevMw1; if (s.mw1 == 0) _mw1Running.value = false
+                              else if (p1 != null && s.mw1 < p1) _mw1Running.value = true
+            val p2 = prevMw2; if (s.mw2 == 0) _mw2Running.value = false
+                              else if (p2 != null && s.mw2 < p2) _mw2Running.value = true
+        }
         prevMw1 = s.mw1
         prevMw2 = s.mw2
 
