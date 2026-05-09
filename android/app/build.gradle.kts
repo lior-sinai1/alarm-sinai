@@ -49,4 +49,5 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.coroutines.android)
+    wearApp(project(":wear"))
 }

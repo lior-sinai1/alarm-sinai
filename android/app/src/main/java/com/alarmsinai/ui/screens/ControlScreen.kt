@@ -54,7 +54,7 @@ fun ControlScreen(vm: AlarmViewModel) {
     }
 
     val breachedSensors = status?.sensors
-        ?.filter { it.value == 1 && it.key !in disabled }
+        ?.filter { it.value == 0 && it.key !in disabled }
         ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
@@ -135,11 +135,12 @@ private fun StatusCard(
     val armed = status?.m175 == 1
 
     val (text, color) = when {
-        status == null        -> "מתחבר..." to AlarmGray
-        alarm                 -> "אזעקה!" to AlarmRed
-        mw1Running && mw1 > 0 -> "מתחבר בעוד\n$mw1 שניות" to AlarmGreen
-        armed                 -> "מערכת דרוכה" to AlarmGreen
-        else                  -> "המערכת מוכנה" to AlarmGray
+        status == null               -> "מתחבר..." to AlarmGray
+        alarm                        -> "אזעקה!" to AlarmRed
+        mw1Running && mw1 > 0        -> "מתחבר בעוד\n$mw1 שניות" to AlarmGreen
+        armed                        -> "מערכת דרוכה" to AlarmGreen
+        breachedSensors.isNotEmpty() -> breachedSensors.joinToString("\n") to AlarmOrange
+        else                         -> "המערכת מוכנה" to AlarmGray
     }
 
     val infinite = rememberInfiniteTransition(label = "blink")
@@ -173,7 +174,7 @@ private fun StatusCard(
                 textAlign = TextAlign.Center,
                 lineHeight = 40.sp
             )
-            if (breachedSensors.isNotEmpty()) {
+            if (alarm && breachedSensors.isNotEmpty()) {
                 Text(
                     text = breachedSensors.joinToString(" · "),
                     fontSize = 15.sp,

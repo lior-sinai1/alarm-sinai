@@ -8,7 +8,7 @@ android {
     compileSdk  = 34
 
     defaultConfig {
-        applicationId   = "com.alarmsinai.wear"
+        applicationId   = "com.alarmsinai"
         minSdk          = 30
         targetSdk       = 34
         versionCode     = 1
