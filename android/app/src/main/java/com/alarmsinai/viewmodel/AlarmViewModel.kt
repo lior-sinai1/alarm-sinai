@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alarmsinai.data.AlarmRepository
 import com.alarmsinai.data.model.HistoryEvent
+import com.alarmsinai.data.model.SENSOR_BYPASS_MAP
 import com.alarmsinai.data.model.SENSOR_NAMES
 import com.alarmsinai.data.model.StatusResponse
 import kotlinx.coroutines.Job
@@ -72,6 +73,9 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
             addHistoryEvent("alarm", "אזעקה!", "פריצה — מערכת האזעקה הופעלה!")
         prevM175 = s.m175
         prevM19  = s.m19
+        // Sync disabled-sensors display set from PLC bypass state
+        val bypassed = s.bypasses.filter { it.value == 1 }.keys.toSet()
+        _disabledSensors.value = bypassed
     }
 
     private fun addHistoryEvent(type: String, title: String, body: String) {
@@ -103,10 +107,24 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Sensor management ────────────────────────────────────────────────────
     fun toggleSensor(addr: String) {
-        val current = _disabledSensors.value.toMutableSet()
-        if (addr in current) current.remove(addr) else current.add(addr)
-        _disabledSensors.value = current
-        repository.saveDisabledSensors(current)
+        val bypassCoil = SENSOR_BYPASS_MAP[addr] ?: return
+        val currentlyBypassed = addr in _disabledSensors.value
+        val newValue = !currentlyBypassed
+        // Optimistic update
+        val updated = _disabledSensors.value.toMutableSet()
+        if (newValue) updated.add(addr) else updated.remove(addr)
+        _disabledSensors.value = updated
+        viewModelScope.launch {
+            try {
+                repository.writeCoil(bypassCoil, newValue)
+            } catch (e: Exception) {
+                // Revert optimistic update on failure
+                val reverted = _disabledSensors.value.toMutableSet()
+                if (!newValue) reverted.add(addr) else reverted.remove(addr)
+                _disabledSensors.value = reverted
+                _commandError.value = "שגיאה: ${e.message}"
+            }
+        }
     }
 
     // ── Computed helpers ──────────────────────────────────────────────────────

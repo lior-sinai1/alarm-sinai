@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.alarmsinai.data.model.SENSOR_BYPASS_MAP
 import com.alarmsinai.data.model.SENSOR_NAMES
 import com.alarmsinai.viewmodel.AlarmViewModel
 
@@ -19,7 +20,7 @@ fun SensorsScreen(vm: AlarmViewModel) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("ניהול חיישנים", style = MaterialTheme.typography.titleLarge)
         Text(
-            "כבה חיישן כדי שלא יופיע בתצוגה",
+            "כבה חיישן כדי לבטל אותו בבקר",
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
@@ -27,12 +28,14 @@ fun SensorsScreen(vm: AlarmViewModel) {
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             items(SENSOR_NAMES.entries.toList()) { (addr, name) ->
+                val hasBypass = addr in SENSOR_BYPASS_MAP
                 val enabled = addr !in disabled
                 SensorToggleRow(
-                    name    = name,
-                    addr    = addr,
-                    enabled = enabled,
-                    onToggle = { vm.toggleSensor(addr) }
+                    name      = name,
+                    addr      = addr,
+                    enabled   = enabled,
+                    hasBypass = hasBypass,
+                    onToggle  = { if (hasBypass) vm.toggleSensor(addr) }
                 )
             }
         }
@@ -44,6 +47,7 @@ private fun SensorToggleRow(
     name: String,
     addr: String,
     enabled: Boolean,
+    hasBypass: Boolean,
     onToggle: () -> Unit
 ) {
     Card(
@@ -67,14 +71,15 @@ private fun SensorToggleRow(
                     color = if (enabled) Color.White else Color.Gray
                 )
                 Text(
-                    "M$addr",
+                    if (hasBypass) "M${SENSOR_BYPASS_MAP[addr]}" else "ללא ביטול",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.DarkGray
                 )
             }
             Switch(
                 checked = enabled,
-                onCheckedChange = { onToggle() }
+                onCheckedChange = { onToggle() },
+                enabled = hasBypass
             )
         }
     }
