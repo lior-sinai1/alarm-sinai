@@ -7,10 +7,11 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Bundle
 import android.provider.Settings
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
