@@ -1,8 +1,6 @@
 package com.alarmsinai
 
 import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.PackageManager
 import android.media.AudioManager
@@ -43,7 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setupAlarmChannel()
+        com.alarmsinai.fcm.AlarmMessagingService.createChannels(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
@@ -61,16 +59,6 @@ class MainActivity : ComponentActivity() {
                 AlarmApp(vm, ::playAlarmSound, ::stopAlarmSound)
             }
         }
-    }
-
-    private fun setupAlarmChannel() {
-        val nm = getSystemService(NotificationManager::class.java)
-        val ch = NotificationChannel("alarm_channel", "התרעות אזעקה", NotificationManager.IMPORTANCE_HIGH).apply {
-            setBypassDnd(true)
-            enableVibration(true)
-            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-        }
-        nm.createNotificationChannel(ch)
     }
 
     fun playAlarmSound() {
