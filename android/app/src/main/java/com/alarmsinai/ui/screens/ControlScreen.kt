@@ -58,6 +58,9 @@ fun ControlScreen(vm: AlarmViewModel) {
         ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
+    val bypassedSensors = disabled
+        .mapNotNull { SENSOR_NAMES[it] }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,7 +68,25 @@ fun ControlScreen(vm: AlarmViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        ConnectionBadge(connected = !error && status?.connected == true)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            ConnectionBadge(connected = !error && status?.connected == true)
+            if (bypassedSensors.isNotEmpty()) {
+                Column(horizontalAlignment = Alignment.End) {
+                    bypassedSensors.forEach { name ->
+                        Text(
+                            text = "⛔ $name",
+                            fontSize = 11.sp,
+                            color = AlarmRed,
+                            textAlign = TextAlign.End
+                        )
+                    }
+                }
+            }
+        }
         StatusCard(status, breachedSensors, mw1Running, mw1)
         if (mw2Running) TimerRow(seconds = mw2, label = "דלת כניסה")
         ZoneButtons(status, vm, alarm, armed)
