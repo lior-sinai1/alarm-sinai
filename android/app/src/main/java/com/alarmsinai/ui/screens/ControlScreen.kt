@@ -135,12 +135,11 @@ private fun StatusCard(
     val armed = status?.m175 == 1
 
     val (text, color) = when {
-        status == null               -> "מתחבר..." to AlarmGray
-        alarm                        -> "אזעקה!" to AlarmRed
-        mw1Running && mw1 > 0        -> "מתחבר בעוד\n$mw1 שניות" to AlarmGreen
-        armed                        -> "מערכת דרוכה" to AlarmGreen
-        breachedSensors.isNotEmpty() -> breachedSensors.joinToString("\n") to AlarmOrange
-        else                         -> "מערכת מוכנה" to AlarmGray
+        status == null        -> "מתחבר..." to AlarmGray
+        alarm                 -> "אזעקה!" to AlarmRed
+        mw1Running && mw1 > 0 -> "מתחבר בעוד\n$mw1 שניות" to AlarmGreen
+        armed                 -> "מערכת דרוכה" to AlarmGreen
+        else                  -> "המערכת מוכנה" to AlarmGray
     }
 
     val infinite = rememberInfiniteTransition(label = "blink")
@@ -174,7 +173,7 @@ private fun StatusCard(
                 textAlign = TextAlign.Center,
                 lineHeight = 40.sp
             )
-            if (alarm && breachedSensors.isNotEmpty()) {
+            if (breachedSensors.isNotEmpty()) {
                 Text(
                     text = breachedSensors.joinToString(" · "),
                     fontSize = 15.sp,
