@@ -123,7 +123,7 @@ async function readStatus() {
     client.readCoils(19, 1),
   ]);
 
-  const timerReg = await client.readHoldingRegisters(1, 1);
+  const timerReg = await client.readHoldingRegisters(1, 2);
 
   // Coils 182–222 = 41 coils, covers all sensor addresses
   const sensorBlock = await client.readCoils(182, 41);
@@ -147,6 +147,7 @@ async function readStatus() {
     m175: armed.data[0] ? 1 : 0,
     m19:  alarm.data[0] ? 1 : 0,
     mw1:  timerReg.data[0],
+    mw2:  timerReg.data[1],
     sensors,
     bypasses,
   };

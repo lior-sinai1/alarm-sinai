@@ -8,6 +8,7 @@ data class StatusResponse(
     val m175: Int,
     val m19: Int,
     val mw1: Int,
+    val mw2: Int = 0,
     val sensors: Map<String, Int>,
     val bypasses: Map<String, Int> = emptyMap()
 )

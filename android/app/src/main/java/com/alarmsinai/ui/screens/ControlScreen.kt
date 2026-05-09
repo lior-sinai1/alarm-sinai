@@ -36,15 +36,18 @@ fun ControlScreen(vm: AlarmViewModel) {
 
     val alarm = status?.m19 == 1
     val armed = status?.m175 == 1
-    val timer = status?.mw1 ?: 0
+    val mw1   = status?.mw1 ?: 0
+    val mw2   = status?.mw2 ?: 0
 
     val breachedSensors = status?.sensors
         ?.filter { it.value == 1 && it.key !in disabled }
         ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
-    if (timer > 0) {
-        TimerScreen(timer)
+    if (mw2 > 0) {
+        TimerScreen(seconds = mw2, label = "דלת כניסה")
+    } else if (mw1 > 0) {
+        TimerScreen(seconds = mw1, label = "מתחבר בעוד")
     } else {
         Column(
             modifier = Modifier
@@ -71,13 +74,13 @@ fun ControlScreen(vm: AlarmViewModel) {
 }
 
 @Composable
-private fun TimerScreen(seconds: Int) {
+private fun TimerScreen(seconds: Int, label: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("מתחבר בעוד", color = AlarmOrange, fontSize = 18.sp)
+            Text(label, color = AlarmOrange, fontSize = 18.sp)
             Text(
                 text = "$seconds",
                 fontSize = 112.sp,
