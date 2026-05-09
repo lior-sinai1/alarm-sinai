@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AlarmSinai"
 include(":app")
+include(":wear")
