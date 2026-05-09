@@ -54,8 +54,7 @@ fun ControlScreen(vm: AlarmViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         ConnectionBadge(connected = !error && status?.connected == true)
-        StatusCard(status, breachedSensors)
-        if (mw1Running) TimerRow(seconds = mw1, label = "מתחבר בעוד")
+        StatusCard(status, breachedSensors, mw1Running, mw1)
         if (mw2Running) TimerRow(seconds = mw2, label = "דלת כניסה")
         ZoneButtons(status, vm, alarm, armed)
     }
@@ -114,13 +113,19 @@ private fun ConnectionBadge(connected: Boolean) {
 }
 
 @Composable
-private fun StatusCard(status: StatusResponse?, breachedSensors: List<String>) {
+private fun StatusCard(
+    status: StatusResponse?,
+    breachedSensors: List<String>,
+    mw1Running: Boolean = false,
+    mw1: Int = 0
+) {
     val alarm = status?.m19 == 1
     val armed = status?.m175 == 1
 
     val (text, color) = when {
         status == null               -> "מתחבר..." to AlarmGray
         alarm                        -> "אזעקה!" to AlarmRed
+        mw1Running && mw1 > 0        -> "מתחבר בעוד\n$mw1 שניות" to AlarmGreen
         armed                        -> "מערכת דרוכה" to AlarmGreen
         breachedSensors.isNotEmpty() -> breachedSensors.joinToString("\n") to AlarmOrange
         else                         -> "מערכת מוכנה" to AlarmGray

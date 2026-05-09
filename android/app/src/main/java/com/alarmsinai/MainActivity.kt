@@ -3,13 +3,13 @@ package com.alarmsinai
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.media.AudioAttributes
 import android.media.AudioManager
-import android.media.Ringtone
-import android.media.RingtoneManager
 import android.media.ToneGenerator
 import android.os.Bundle
 import android.provider.Settings
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -33,7 +33,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 class MainActivity : ComponentActivity() {
 
     private val vm: AlarmViewModel by viewModels()
-    private var alarmRingtone: Ringtone? = null
+    private var sirenJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,22 +59,24 @@ class MainActivity : ComponentActivity() {
     }
 
     fun playAlarmSound() {
-        if (alarmRingtone?.isPlaying == true) return
-        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-        alarmRingtone = RingtoneManager.getRingtone(this, uri)?.apply {
-            audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-            isLooping = true
-            play()
+        if (sirenJob?.isActive == true) return
+        sirenJob = lifecycleScope.launch {
+            while (true) {
+                val hi = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+                hi.startTone(ToneGenerator.TONE_CDMA_HIGH_L, 600)
+                delay(650)
+                hi.release()
+                val lo = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+                lo.startTone(ToneGenerator.TONE_CDMA_LOW_L, 600)
+                delay(650)
+                lo.release()
+            }
         }
     }
 
     fun stopAlarmSound() {
-        alarmRingtone?.stop()
-        alarmRingtone = null
+        sirenJob?.cancel()
+        sirenJob = null
     }
 
     override fun onResume() { super.onResume(); vm.startPolling() }
