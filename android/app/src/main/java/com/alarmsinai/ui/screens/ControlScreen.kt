@@ -36,10 +36,22 @@ fun ControlScreen(vm: AlarmViewModel) {
 
     val alarm      = status?.m19 == 1
     val armed      = status?.m175 == 1
-    val mw1        = status?.mw1 ?: 0
-    val mw2        = status?.mw2 ?: 0
+    val serverMw1  = status?.mw1 ?: 0
+    val serverMw2  = status?.mw2 ?: 0
     val mw1Running by vm.mw1Running.collectAsState()
     val mw2Running by vm.mw2Running.collectAsState()
+
+    // Local countdown — syncs from server, ticks every 500ms for smooth display
+    var mw1 by remember { mutableIntStateOf(serverMw1) }
+    var mw2 by remember { mutableIntStateOf(serverMw2) }
+    LaunchedEffect(serverMw1) { mw1 = serverMw1 }
+    LaunchedEffect(serverMw2) { mw2 = serverMw2 }
+    LaunchedEffect(mw1Running) {
+        while (mw1Running) { kotlinx.coroutines.delay(500); if (mw1 > 0) mw1-- }
+    }
+    LaunchedEffect(mw2Running) {
+        while (mw2Running) { kotlinx.coroutines.delay(500); if (mw2 > 0) mw2-- }
+    }
 
     val breachedSensors = status?.sensors
         ?.filter { it.value == 1 && it.key !in disabled }

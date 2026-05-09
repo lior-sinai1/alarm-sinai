@@ -70,7 +70,7 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (_: Exception) {
                     _connectionError.value = true
                 }
-                delay(3_000)
+                delay(1_000)
             }
         }
     }
