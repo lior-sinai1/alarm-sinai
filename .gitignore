@@ -3,7 +3,7 @@ fcm-tokens.json
 firebase-service-account.json
 
 # Android
-android/app/google-services.json
+# android/app/google-services.json  # committed as template — override with real file
 android/.gradle/
 android/build/
 android/app/build/
