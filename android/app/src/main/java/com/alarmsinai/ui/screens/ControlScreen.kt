@@ -1,6 +1,5 @@
 package com.alarmsinai.ui.screens
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -8,10 +7,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.alarmsinai.data.model.SENSOR_NAMES
 import com.alarmsinai.data.model.StatusResponse
 import com.alarmsinai.ui.theme.AlarmGray
 import com.alarmsinai.ui.theme.AlarmGreen
@@ -31,34 +30,34 @@ import com.alarmsinai.viewmodel.AlarmViewModel
 
 @Composable
 fun ControlScreen(vm: AlarmViewModel) {
-    val status by vm.status.collectAsState()
-    val error  by vm.connectionError.collectAsState()
-    val cmdErr by vm.commandError.collectAsState()
-    val visibleSensors = vm.visibleSensors()
+    val status   by vm.status.collectAsState()
+    val error    by vm.connectionError.collectAsState()
+    val cmdErr   by vm.commandError.collectAsState()
+    val disabled by vm.disabledSensors.collectAsState()
+
+    // Breached sensors (visible only)
+    val breachedSensors = status?.sensors
+        ?.filter { it.value == 1 && it.key !in disabled }
+        ?.mapNotNull { SENSOR_NAMES[it.key]?.let { name -> name } }
+        ?: emptyList()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Connection indicator
         ConnectionBadge(connected = !error && status?.connected == true)
 
-        // Main status display
-        StatusCard(status)
+        // Main status card
+        StatusCard(status, breachedSensors)
 
         // Zone buttons
         ZoneButtons(status, vm)
-
-        // Sensors grid
-        if (visibleSensors.isNotEmpty()) {
-            Text("חיישנים", style = MaterialTheme.typography.titleSmall, color = Color.Gray)
-            SensorsGrid(status, visibleSensors)
-        }
     }
 
-    // Command error snackbar
     cmdErr?.let { msg ->
         LaunchedEffect(msg) {
             kotlinx.coroutines.delay(3000)
@@ -79,32 +78,31 @@ private fun ConnectionBadge(connected: Boolean) {
         horizontalArrangement = Arrangement.End,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Box(
-            Modifier
-                .size(10.dp)
-                .background(color, shape = RoundedCornerShape(50))
-        )
+        Box(Modifier.size(10.dp).background(color, RoundedCornerShape(50)))
         Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 12.sp, color = color)
     }
 }
 
 @Composable
-private fun StatusCard(status: StatusResponse?) {
+private fun StatusCard(status: StatusResponse?, breachedSensors: List<String>) {
+    val alarm  = status?.m19 == 1
+    val armed  = status?.m175 == 1
+    val timer  = status?.mw1 ?: 0
+
     val (text, color) = when {
-        status == null          -> "מתחבר..." to AlarmGray
-        status.m19 == 1        -> "אזעקה!" to AlarmRed
-        status.m175 == 1 && status.mw1 > 0 -> "מערכת דרוכה — ${status.mw1} שניות" to AlarmGreen
-        status.m175 == 1       -> "מערכת דרוכה" to AlarmGreen
-        status.sensors.any { it.value == 1 } ->
-            "פרוץ: ${status.sensors.entries.first { it.value == 1 }.key}" to AlarmOrange
-        else                   -> "מערכת מוכנה" to AlarmGray
+        status == null  -> "מתחבר..." to AlarmGray
+        alarm           -> "אזעקה!" to AlarmRed
+        armed && timer > 0 -> "מערכת דרוכה\n${timer} שניות" to AlarmGreen
+        armed           -> "מערכת דרוכה" to AlarmGreen
+        breachedSensors.isNotEmpty() -> breachedSensors.joinToString("\n") to AlarmOrange
+        else            -> "מערכת מוכנה" to AlarmGray
     }
 
     val infinite = rememberInfiniteTransition(label = "blink")
-    val alpha by if (status?.m19 == 1) {
+    val alpha by if (alarm) {
         infinite.animateFloat(
-            initialValue = 1f, targetValue = 0.2f, label = "blink",
+            initialValue = 1f, targetValue = 0.15f, label = "blink",
             animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse)
         )
     } else {
@@ -112,22 +110,22 @@ private fun StatusCard(status: StatusResponse?) {
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier.fillMaxWidth().height(160.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-                .alpha(if (status?.m19 == 1) alpha else 1f),
+            modifier = Modifier.fillMaxSize().alpha(if (alarm) alpha else 1f),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = text,
-                fontSize = 28.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = color,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                lineHeight = 40.sp,
+                modifier = Modifier.padding(16.dp)
             )
         }
     }
@@ -142,71 +140,36 @@ private fun ZoneButtons(status: StatusResponse?, vm: AlarmViewModel) {
         11 to "קומה א'",
         12 to "כללית"
     )
-    val btnColor by animateColorAsState(
-        targetValue = if (armed) AlarmRed else AlarmGreen,
-        label = "zoneColor"
-    )
+    val btnColor = if (armed) AlarmRed else AlarmGreen
 
     Text(
         if (armed) "לחץ לנטרול" else "בחר מעגל לדריכה",
         style = MaterialTheme.typography.titleSmall,
-        color = Color.Gray
-    )
-    Row(
+        color = Color.Gray,
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        zones.forEach { (zone, label) ->
-            Button(
-                onClick = { vm.toggleZone(zone) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = btnColor)
-            ) {
-                Text(label, fontSize = 12.sp, maxLines = 1)
-            }
-        }
-    }
-}
+        textAlign = TextAlign.Center
+    )
 
-@Composable
-private fun SensorsGrid(
-    status: StatusResponse?,
-    visibleSensors: List<Pair<String, String>>
-) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        items(visibleSensors) { (addr, name) ->
-            val breached = status?.sensors?.get(addr) == 1
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (breached) AlarmRed.copy(alpha = 0.2f)
-                                     else MaterialTheme.colorScheme.surface
-                ),
-                border = if (breached) androidx.compose.foundation.BorderStroke(1.dp, AlarmRed) else null
+    // 2x2 grid of big buttons
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        zones.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        Modifier
-                            .size(8.dp)
-                            .background(
-                                if (breached) AlarmRed else AlarmGreen,
-                                RoundedCornerShape(50)
-                            )
-                    )
-                    Text(
-                        name,
-                        fontSize = 11.sp,
-                        color = if (breached) AlarmRed else Color.White,
-                        fontWeight = if (breached) FontWeight.Bold else FontWeight.Normal
-                    )
+                row.forEach { (zone, label) ->
+                    Button(
+                        onClick = { vm.toggleZone(zone) },
+                        modifier = Modifier.weight(1f).height(90.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = btnColor),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            label,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
