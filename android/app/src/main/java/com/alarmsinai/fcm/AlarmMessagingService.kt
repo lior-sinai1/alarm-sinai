@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.alarmsinai.MainActivity
 import com.alarmsinai.R
 import com.alarmsinai.data.AlarmRepository
+import com.alarmsinai.service.AlarmSoundService
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +65,13 @@ class AlarmMessagingService : FirebaseMessagingService() {
 
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(System.currentTimeMillis().toInt(), notif)
+
+        when (type) {
+            "alarm" -> startForegroundService(Intent(this, AlarmSoundService::class.java))
+            "disarm" -> startService(Intent(this, AlarmSoundService::class.java).apply {
+                action = AlarmSoundService.ACTION_STOP
+            })
+        }
     }
 
     companion object {

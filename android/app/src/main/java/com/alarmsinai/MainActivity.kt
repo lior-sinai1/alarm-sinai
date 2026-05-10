@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import com.alarmsinai.service.AlarmSoundService
 import com.alarmsinai.ui.screens.ControlScreen
 import com.alarmsinai.ui.screens.HistoryScreen
 import com.alarmsinai.ui.screens.SensorsScreen
@@ -113,8 +114,17 @@ private fun AlarmApp(
     LaunchedEffect(status?.m19) {
         val isAlarm = status?.m19 == 1
         when {
-            isAlarm && !wasAlarm -> playAlarm()
-            !isAlarm && wasAlarm -> stopAlarm()
+            isAlarm && !wasAlarm -> {
+                playAlarm()
+            }
+            !isAlarm && wasAlarm -> {
+                stopAlarm()
+                context.startService(
+                    android.content.Intent(context, AlarmSoundService::class.java).apply {
+                        action = AlarmSoundService.ACTION_STOP
+                    }
+                )
+            }
         }
         wasAlarm = isAlarm
     }
