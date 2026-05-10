@@ -54,7 +54,7 @@ fun ControlScreen(vm: AlarmViewModel) {
     }
 
     val breachedSensors = status?.sensors
-        ?.filter { it.value == 1 && it.key !in disabled }
+        ?.filter { it.value == 0 && it.key !in disabled }
         ?.mapNotNull { SENSOR_NAMES[it.key] }
         ?: emptyList()
 
