@@ -109,6 +109,7 @@ private fun AlarmApp(
     val mw2 = status?.mw2 ?: 0
     var selectedTab by remember { mutableIntStateOf(0) }
     var wasAlarm by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // Local audio alert — bypasses silent/DND via USAGE_ALARM
     LaunchedEffect(status?.m19) {
@@ -141,7 +142,6 @@ private fun AlarmApp(
     }
 
     // Request DND access once so the notification channel can bypass it
-    val context = LocalContext.current
     LaunchedEffect(Unit) {
         val nm = context.getSystemService(NotificationManager::class.java)
         if (!nm.isNotificationPolicyAccessGranted) {
