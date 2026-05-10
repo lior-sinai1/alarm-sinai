@@ -61,16 +61,25 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     fun startPolling() {
         pollJob?.cancel()
         pollJob = viewModelScope.launch {
+            var failCount = 0
             while (true) {
                 try {
                     val s = repository.fetchStatus()
                     _status.value = s
                     _connectionError.value = false
+                    failCount = 0
                     detectChanges(s)
+                    delay(1_000)
                 } catch (_: Exception) {
                     _connectionError.value = true
+                    failCount++
+                    val retryDelay = when {
+                        failCount <= 3  -> 2_000L
+                        failCount <= 10 -> 5_000L
+                        else            -> 15_000L
+                    }
+                    delay(retryDelay)
                 }
-                delay(1_000)
             }
         }
     }
@@ -78,7 +87,7 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     fun stopPolling() { pollJob?.cancel() }
 
     private fun detectChanges(s: StatusResponse) {
-        if (prevM19 == 0 && s.m19 == 1) {
+        if (prevM19 != null && prevM19 == 0 && s.m19 == 1) {
             val breached = s.sensors.filter { it.value == 1 }
                 .mapNotNull { SENSOR_NAMES[it.key] }
             val body = if (breached.isEmpty()) "פריצה — מערכת האזעקה הופעלה!"

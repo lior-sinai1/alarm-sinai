@@ -36,13 +36,15 @@ class AlarmSoundService : Service() {
         scope.launch {
             while (isActive) {
                 val hi = ToneGenerator(AudioManager.STREAM_ALARM, 100)
-                hi.startTone(ToneGenerator.TONE_CDMA_HIGH_L, 600)
-                delay(650)
-                hi.release()
+                try {
+                    hi.startTone(ToneGenerator.TONE_CDMA_HIGH_L, 600)
+                    delay(650)
+                } finally { hi.release() }
                 val lo = ToneGenerator(AudioManager.STREAM_ALARM, 100)
-                lo.startTone(ToneGenerator.TONE_CDMA_LOW_L, 600)
-                delay(650)
-                lo.release()
+                try {
+                    lo.startTone(ToneGenerator.TONE_CDMA_LOW_L, 600)
+                    delay(650)
+                } finally { lo.release() }
             }
         }
 

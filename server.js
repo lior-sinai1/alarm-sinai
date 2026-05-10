@@ -94,13 +94,13 @@ async function connectModbus() {
     await client.connectTCP(PLC_HOST, { port: PLC_PORT });
     client.setID(PLC_ID);
     connected = true;
-    reconnecting = false;
     console.log('Modbus connected to', PLC_HOST);
   } catch (err) {
     connected = false;
-    reconnecting = false;
     console.error('Modbus connect failed:', err.message, '— retry in 5s');
     setTimeout(connectModbus, 5000);
+  } finally {
+    reconnecting = false;
   }
 }
 

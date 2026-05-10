@@ -64,7 +64,8 @@ class AlarmMessagingService : FirebaseMessagingService() {
             .build()
 
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(System.currentTimeMillis().toInt(), notif)
+        val notifId = if (type == "alarm") 1001 else 1002
+        nm.notify(notifId, notif)
 
         when (type) {
             "alarm" -> startForegroundService(Intent(this, AlarmSoundService::class.java))

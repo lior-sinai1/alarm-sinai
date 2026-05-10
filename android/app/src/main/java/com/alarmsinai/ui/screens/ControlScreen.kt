@@ -113,7 +113,7 @@ private fun TimerRow(seconds: Int, label: String) {
 @Composable
 private fun ConnectionBadge(connected: Boolean) {
     val color = if (connected) AlarmGreen else AlarmRed
-    val label = if (connected) "מחובר" else "לא מחובר"
+    val label = if (connected) "מחובר" else "מנסה להתחבר..."
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End,
