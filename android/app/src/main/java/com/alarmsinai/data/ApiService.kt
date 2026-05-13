@@ -17,7 +17,7 @@ interface ApiService {
     suspend fun arm(@Body request: ArmRequest): GenericResponse
 
     @POST("disarm")
-    suspend fun disarm(): GenericResponse
+    suspend fun disarm(@Body body: Map<String, String> = emptyMap()): GenericResponse
 
     @POST("register-token")
     suspend fun registerToken(@Body request: TokenRequest): GenericResponse

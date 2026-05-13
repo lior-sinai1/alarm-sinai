@@ -47,7 +47,7 @@ class AlarmRepository(context: Context) {
 
     suspend fun arm(zone: Int) = buildApi().arm(ArmRequest(zone))
 
-    suspend fun disarm() = buildApi().disarm()
+    suspend fun disarm() = buildApi().disarm(emptyMap())
 
     suspend fun registerToken(token: String) =
         buildApi().registerToken(TokenRequest(token))
