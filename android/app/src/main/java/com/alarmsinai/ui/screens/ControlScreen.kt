@@ -148,14 +148,11 @@ private fun StatusCard(
     }
 
     val infinite = rememberInfiniteTransition(label = "blink")
-    val blinkAlpha by if (alarm) {
-        infinite.animateFloat(
-            initialValue = 1f, targetValue = 0.15f, label = "blink",
-            animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse)
-        )
-    } else {
-        remember { mutableStateOf(1f) }
-    }
+    val rawBlink by infinite.animateFloat(
+        initialValue = 1f, targetValue = 0.15f, label = "blink",
+        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse)
+    )
+    val blinkAlpha = if (alarm) rawBlink else 1f
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -213,6 +210,13 @@ private fun ZoneButtons(
 ) {
     val zones = listOf(9 to "היקפית", 10 to "נפח", 11 to "קומה א'", 12 to "כללית")
 
+    val infinite = rememberInfiniteTransition(label = "btnBlink")
+    val rawBlink by infinite.animateFloat(
+        initialValue = 1f, targetValue = 0.25f, label = "btnBlink",
+        animationSpec = infiniteRepeatable(tween(400), RepeatMode.Reverse)
+    )
+    val blinkAlpha = if (alarm) rawBlink else 1f
+
     val btnColor = when {
         alarm -> AlarmRed
         armed -> AlarmGreen
@@ -230,29 +234,25 @@ private fun ZoneButtons(
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        zones.chunked(2).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        zones.forEach { (zone, label) ->
+            Button(
+                onClick = { vm.toggleZone(zone) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp)
+                    .alpha(blinkAlpha),
+                colors = ButtonDefaults.buttonColors(containerColor = btnColor),
+                shape = RoundedCornerShape(12.dp),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 8.dp,
+                    pressedElevation = 2.dp
+                )
             ) {
-                row.forEach { (zone, label) ->
-                    Button(
-                        onClick = { vm.toggleZone(zone) },
-                        modifier = Modifier.weight(1f).height(88.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = btnColor),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 8.dp,
-                            pressedElevation = 2.dp
-                        )
-                    ) {
-                        Text(
-                            if (armed || alarm) "נטרל" else label,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                Text(
+                    if (armed || alarm) "נטרל" else label,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
