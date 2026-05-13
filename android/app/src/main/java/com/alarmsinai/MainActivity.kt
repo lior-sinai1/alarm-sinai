@@ -142,17 +142,6 @@ private fun AlarmApp(
         wasAlarm = isAlarm
     }
 
-    // Tick sound every second while timer is counting
-    val timerValue = if (mw2Running) mw2 else if (mw1Running) mw1 else -1
-    LaunchedEffect(timerValue) {
-        if (timerValue > 0) {
-            val tone = ToneGenerator(AudioManager.STREAM_ALARM, 60)
-            tone.startTone(ToneGenerator.TONE_PROP_BEEP, 80)
-            kotlinx.coroutines.delay(150)
-            tone.release()
-        }
-    }
-
     // Request DND access once so the notification channel can bypass it
     LaunchedEffect(Unit) {
         val nm = context.getSystemService(NotificationManager::class.java)

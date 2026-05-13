@@ -48,27 +48,23 @@ class AlarmMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val channelId = if (type == "alarm") CHANNEL_ALARM else CHANNEL_STATUS
-        val notif = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_alarm)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setContentIntent(tapIntent)
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .apply {
-                if (type == "alarm") setFullScreenIntent(fullScreenIntent, true)
-            }
-            .build()
-
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notifId = if (type == "alarm") 1001 else 1002
-        nm.notify(notifId, notif)
-
         when (type) {
-            "alarm" -> startForegroundService(Intent(this, AlarmSoundService::class.java))
+            "alarm" -> {
+                val notif = NotificationCompat.Builder(this, CHANNEL_ALARM)
+                    .setSmallIcon(R.drawable.ic_alarm)
+                    .setContentTitle(title)
+                    .setContentText(body)
+                    .setContentIntent(tapIntent)
+                    .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setFullScreenIntent(fullScreenIntent, true)
+                    .build()
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                nm.notify(1001, notif)
+                startForegroundService(Intent(this, AlarmSoundService::class.java))
+            }
             "disarm" -> startService(Intent(this, AlarmSoundService::class.java).apply {
                 action = AlarmSoundService.ACTION_STOP
             })
