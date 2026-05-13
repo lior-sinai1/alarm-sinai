@@ -32,12 +32,10 @@ data class GenericResponse(val ok: Boolean)
 interface WearApiService {
     @GET("status") suspend fun status(): StatusResponse
     @POST("arm") suspend fun arm(@Body body: ArmRequest): GenericResponse
-    @POST("disarm") suspend fun disarm(): GenericResponse
+    @POST("disarm") suspend fun disarm(@Body body: Map<String, String>): GenericResponse
 }
 
 class MainActivity : ComponentActivity() {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("alarm_prefs", Context.MODE_PRIVATE)
@@ -48,12 +46,7 @@ class MainActivity : ComponentActivity() {
             .build()
             .create(WearApiService::class.java)
 
-        setContent { WearApp(api, scope) }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        scope.cancel()
+        setContent { WearApp(api) }
     }
 
     companion object {
@@ -62,15 +55,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WearApp(api: WearApiService, scope: CoroutineScope) {
+fun WearApp(api: WearApiService) {
+    val coroutineScope = rememberCoroutineScope()
     var status by remember { mutableStateOf<StatusResponse?>(null) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     var stateChangedAt by remember { mutableStateOf(0L) }
     var elapsedSeconds by remember { mutableStateOf(0L) }
-
-    val isArmed = status?.m175 == 1
-    val isAlarm = status?.m19 == 1
     val prevStateKey = remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
@@ -99,6 +90,9 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
             delay(1000)
         }
     }
+
+    val isArmed = status?.m175 == 1
+    val isAlarm = status?.m19 == 1
 
     val bgColor = when {
         error   -> Color(0xFF1A1A1A)
@@ -138,7 +132,6 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
                 verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
                 modifier = Modifier.padding(horizontal = 12.dp)
             ) {
-                // Status + Timer rectangle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -168,23 +161,26 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
                     }
                 }
 
-                // Arm / Disarm buttons
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Arm button
                     Chip(
                         onClick = {
                             if (!loading && status != null && !error && !isArmed && !isAlarm) {
-                                loading = true
-                                scope.launch {
+                                coroutineScope.launch {
+                                    loading = true
                                     try {
-                                        api.arm(ArmRequest(4))
+                                        withContext(Dispatchers.IO) { api.arm(ArmRequest(4)) }
                                         delay(500)
-                                        status = withContext(Dispatchers.IO) { api.status() }
-                                    } catch (e: Exception) { error = true }
-                                    finally { loading = false }
+                                        val s = withContext(Dispatchers.IO) { api.status() }
+                                        status = s
+                                        error = false
+                                    } catch (e: Exception) {
+                                        error = true
+                                    } finally {
+                                        loading = false
+                                    }
                                 }
                             }
                         },
@@ -206,18 +202,22 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
                         }
                     )
 
-                    // Disarm button
                     Chip(
                         onClick = {
                             if (!loading && status != null && !error && (isArmed || isAlarm)) {
-                                loading = true
-                                scope.launch {
+                                coroutineScope.launch {
+                                    loading = true
                                     try {
-                                        api.disarm()
+                                        withContext(Dispatchers.IO) { api.disarm(emptyMap()) }
                                         delay(500)
-                                        status = withContext(Dispatchers.IO) { api.status() }
-                                    } catch (e: Exception) { error = true }
-                                    finally { loading = false }
+                                        val s = withContext(Dispatchers.IO) { api.status() }
+                                        status = s
+                                        error = false
+                                    } catch (e: Exception) {
+                                        error = true
+                                    } finally {
+                                        loading = false
+                                    }
                                 }
                             }
                         },
@@ -239,7 +239,6 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
                     )
                 }
 
-                // Loading indicator
                 if (loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
