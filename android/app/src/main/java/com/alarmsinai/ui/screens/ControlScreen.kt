@@ -74,7 +74,7 @@ fun ControlScreen(vm: AlarmViewModel) {
     ) {
         ConnectionBadge(connected = !error && status?.connected == true)
         StatusCard(status, breachedSensors, bypassedSensors, mw1Running, mw1)
-        if (mw2Running) TimerRow(seconds = mw2, label = "דלת כניסה")
+        if (mw2Running) TimerRow(seconds = mw2)
         ZoneButtons(status, vm, alarm, armed)
     }
 
@@ -90,25 +90,38 @@ fun ControlScreen(vm: AlarmViewModel) {
 }
 
 @Composable
-private fun TimerRow(seconds: Int, label: String) {
+private fun TimerRow(seconds: Int) {
+    val maxSeconds = remember { seconds.coerceAtLeast(1) }
+    val progress = (seconds.toFloat() / maxSeconds).coerceIn(0f, 1f)
+    val color = when {
+        progress > 0.5f -> AlarmGreen
+        progress > 0.25f -> AlarmOrange
+        else -> AlarmRed
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(label, fontSize = 18.sp, color = AlarmGreen)
             Text(
-                text = "$seconds שניות",
-                fontSize = 28.sp,
+                text = "$seconds",
+                fontSize = 48.sp,
                 fontWeight = FontWeight.Bold,
-                color = AlarmGreen
+                color = color
+            )
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(4.dp),
+                color = color,
+                trackColor = color.copy(alpha = 0.15f)
             )
         }
     }
@@ -145,11 +158,14 @@ private fun StatusCard(
     val (text, color) = when {
         status == null               -> "מתחבר..." to AlarmGray
         alarm                        -> "אזעקה!" to AlarmRed
-        mw1Running && mw1 > 0        -> "מתחבר בעוד\n$mw1 שניות" to AlarmGreen
+        mw1Running && mw1 > 0        -> "$mw1" to AlarmGreen
         armed                        -> "מערכת דרוכה" to AlarmGreen
         breachedSensors.isNotEmpty() -> breachedSensors.joinToString("\n") to AlarmOrange
         else                         -> "המערכת מוכנה" to AlarmGray
     }
+
+    val maxMw1 = remember(mw1Running) { if (mw1Running) mw1.coerceAtLeast(1) else 1 }
+    val timerProgress = if (mw1Running && mw1 > 0) (mw1.toFloat() / maxMw1).coerceIn(0f, 1f) else 0f
 
     val infinite = rememberInfiniteTransition(label = "blink")
     val rawBlink by infinite.animateFloat(
@@ -173,12 +189,20 @@ private fun StatusCard(
         ) {
             Text(
                 text = text,
-                fontSize = 32.sp,
+                fontSize = if (mw1Running && mw1 > 0) 48.sp else 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = color,
                 textAlign = TextAlign.Center,
                 lineHeight = 40.sp
             )
+            if (mw1Running && mw1 > 0) {
+                LinearProgressIndicator(
+                    progress = { timerProgress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                    color = color,
+                    trackColor = color.copy(alpha = 0.15f)
+                )
+            }
             if (alarm && breachedSensors.isNotEmpty()) {
                 Text(
                     text = breachedSensors.joinToString(" · "),
@@ -212,7 +236,7 @@ private fun ZoneButtons(
     alarm: Boolean,
     armed: Boolean
 ) {
-    val zones = listOf(9 to "היקפית", 10 to "נפח", 11 to "קומה א'", 12 to "כללית")
+    val zones = listOf(9 to "היקפית", 10 to "נפח", 11 to "קומה א'", 12 to "מלעה")
 
     val infinite = rememberInfiniteTransition(label = "btnBlink")
     val rawBlink by infinite.animateFloat(
