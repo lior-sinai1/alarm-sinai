@@ -113,6 +113,16 @@ private fun AlarmApp(
     var wasAlarm by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    // Dynamic launcher icon based on system state
+    LaunchedEffect(status?.m19, status?.m175) {
+        val iconState = when {
+            status?.m19  == 1 -> IconManager.State.ALARM
+            status?.m175 == 1 -> IconManager.State.ARMED
+            else              -> IconManager.State.IDLE
+        }
+        IconManager.update(context, iconState)
+    }
+
     // Local audio alert — bypasses silent/DND via USAGE_ALARM
     LaunchedEffect(status?.m19) {
         val isAlarm = status?.m19 == 1

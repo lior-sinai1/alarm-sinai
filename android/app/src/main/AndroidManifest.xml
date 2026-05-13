@@ -21,12 +21,49 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:showOnLockScreen="true">
+            android:showOnLockScreen="true" />
+
+        <!-- מצב מוכן — ברירת מחדל -->
+        <activity-alias
+            android:name=".MainActivityIdle"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_idle"
+            android:roundIcon="@mipmap/ic_launcher_idle"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+
+        <!-- מצב דרוך -->
+        <activity-alias
+            android:name=".MainActivityArmed"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_armed"
+            android:roundIcon="@mipmap/ic_launcher_armed"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- מצב אזעקה -->
+        <activity-alias
+            android:name=".MainActivityAlarm"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alarm"
+            android:roundIcon="@mipmap/ic_launcher_alarm"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".fcm.AlarmMessagingService"
