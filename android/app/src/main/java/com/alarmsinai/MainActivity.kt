@@ -87,6 +87,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() { super.onResume(); vm.startPolling() }
     override fun onPause()  { super.onPause();  vm.stopPolling()  }
+    override fun onStop() {
+        super.onStop()
+        val s = vm.status.value
+        val iconState = when {
+            s?.m19  == 1 -> IconManager.State.ALARM
+            s?.m175 == 1 -> IconManager.State.ARMED
+            else         -> IconManager.State.IDLE
+        }
+        IconManager.update(this, iconState)
+    }
     override fun onDestroy() { super.onDestroy(); stopAlarmSound() }
 }
 
@@ -112,16 +122,6 @@ private fun AlarmApp(
     var selectedTab by remember { mutableIntStateOf(0) }
     var wasAlarm by remember { mutableStateOf(false) }
     val context = LocalContext.current
-
-    // Dynamic launcher icon based on system state
-    LaunchedEffect(status?.m19, status?.m175) {
-        val iconState = when {
-            status?.m19  == 1 -> IconManager.State.ALARM
-            status?.m175 == 1 -> IconManager.State.ARMED
-            else              -> IconManager.State.IDLE
-        }
-        IconManager.update(context, iconState)
-    }
 
     // Local audio alert — bypasses silent/DND via USAGE_ALARM
     LaunchedEffect(status?.m19) {
