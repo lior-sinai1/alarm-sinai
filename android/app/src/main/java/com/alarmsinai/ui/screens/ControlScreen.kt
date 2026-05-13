@@ -240,7 +240,11 @@ private fun ZoneButtons(
                         onClick = { vm.toggleZone(zone) },
                         modifier = Modifier.weight(1f).height(88.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = btnColor),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 8.dp,
+                            pressedElevation = 2.dp
+                        )
                     ) {
                         Text(
                             if (armed || alarm) "נטרל" else label,
