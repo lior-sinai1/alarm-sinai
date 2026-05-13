@@ -1,10 +1,12 @@
 package com.alarmsinai.ui.screens
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -217,10 +221,19 @@ private fun ZoneButtons(
     )
     val blinkAlpha = if (alarm) rawBlink else 1f
 
-    val btnColor = when {
-        alarm -> AlarmRed
-        armed -> AlarmGreen
-        else  -> AlarmGray
+    val emboss = when {
+        alarm -> EmbossColors(
+            top = Color(0xFFef5350), mid = Color(0xFFE53935), bot = Color(0xFFb71c1c),
+            ledge = Color(0xFF5a0a0a), border = Color(0xFF7f1010)
+        )
+        armed -> EmbossColors(
+            top = Color(0xFF3d9e42), mid = Color(0xFF2E7D32), bot = Color(0xFF1b5e20),
+            ledge = Color(0xFF0f3312), border = Color(0xFF1a4f1e)
+        )
+        else -> EmbossColors(
+            top = Color(0xFF8a8a8a), mid = Color(0xFF757575), bot = Color(0xFF555555),
+            ledge = Color(0xFF2a2a2a), border = Color(0xFF3a3a3a)
+        )
     }
 
     val hint = if (armed || alarm) "לחץ לנטרול" else "בחר מעגל לדריכה"
@@ -233,27 +246,92 @@ private fun ZoneButtons(
         textAlign = TextAlign.Center
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.alpha(blinkAlpha)
+    ) {
         zones.forEach { (zone, label) ->
-            Button(
+            EmbossButton(
+                text = if (armed || alarm) "נטרל" else label,
+                colors = emboss,
                 onClick = { vm.toggleZone(zone) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+private data class EmbossColors(
+    val top: Color, val mid: Color, val bot: Color,
+    val ledge: Color, val border: Color
+)
+
+@Composable
+private fun EmbossButton(
+    text: String,
+    colors: EmbossColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 4.dp else 0.dp,
+        animationSpec = tween(80),
+        label = "pressOffset"
+    )
+    val ledgeVisible by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 6.dp,
+        animationSpec = tween(80),
+        label = "ledge"
+    )
+    val shape = RoundedCornerShape(16.dp)
+
+    Box(
+        modifier = modifier
+            .height(72.dp + 8.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+    ) {
+        // Ledge — the "depth" shadow below the face
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(top = ledgeVisible)
+                .clip(shape)
+                .background(colors.ledge)
+        )
+        // Button face
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .offset(y = offsetY)
+                .clip(shape)
+                .border(1.dp, colors.border, shape)
+                .background(
+                    Brush.verticalGradient(listOf(colors.top, colors.mid, colors.bot))
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Top highlight
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
-                    .alpha(blinkAlpha),
-                colors = ButtonDefaults.buttonColors(containerColor = btnColor),
-                shape = RoundedCornerShape(12.dp),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 8.dp,
-                    pressedElevation = 2.dp
-                )
-            ) {
-                Text(
-                    if (armed || alarm) "נטרל" else label,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.22f))
+                    .align(Alignment.TopCenter)
+            )
+            Text(
+                text = text,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
     }
 }
