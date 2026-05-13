@@ -5,10 +5,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,11 +66,23 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
     var status by remember { mutableStateOf<StatusResponse?>(null) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
+    var stateChangedAt by remember { mutableStateOf(0L) }
+    var elapsedSeconds by remember { mutableStateOf(0L) }
+
+    val isArmed = status?.m175 == 1
+    val isAlarm = status?.m19 == 1
+    val prevStateKey = remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         while (true) {
             try {
-                status = withContext(Dispatchers.IO) { api.status() }
+                val s = withContext(Dispatchers.IO) { api.status() }
+                val newKey = "${s.m175}_${s.m19}"
+                if (newKey != prevStateKey.value) {
+                    stateChangedAt = System.currentTimeMillis()
+                    prevStateKey.value = newKey
+                }
+                status = s
                 error = false
             } catch (e: Exception) {
                 error = true
@@ -76,14 +91,20 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
         }
     }
 
-    val isArmed = status?.m175 == 1
-    val isAlarm = status?.m19 == 1
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (stateChangedAt > 0) {
+                elapsedSeconds = (System.currentTimeMillis() - stateChangedAt) / 1000
+            }
+            delay(1000)
+        }
+    }
 
     val bgColor = when {
-        error        -> Color(0xFF424242)
-        isAlarm      -> Color(0xFFB71C1C)
-        isArmed      -> Color(0xFF1B5E20)
-        else         -> Color(0xFF212121)
+        error   -> Color(0xFF1A1A1A)
+        isAlarm -> Color(0xFF1A0000)
+        isArmed -> Color(0xFF001A00)
+        else    -> Color(0xFF121212)
     }
 
     val statusText = when {
@@ -94,6 +115,19 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
         else           -> "מנוטרל"
     }
 
+    val timerText: String? = if (status != null && !error && (isArmed || isAlarm)) {
+        val m = elapsedSeconds / 60
+        val s = elapsedSeconds % 60
+        "%02d:%02d".format(m, s)
+    } else null
+
+    val statusBoxColor = when {
+        error   -> Color(0xFF424242)
+        isAlarm -> Color(0xFFB71C1C)
+        isArmed -> Color(0xFF1B5E20)
+        else    -> Color(0xFF2C2C2C)
+    }
+
     MaterialTheme {
         Box(
             modifier = Modifier.fillMaxSize().background(bgColor),
@@ -101,53 +135,117 @@ fun WearApp(api: WearApiService, scope: CoroutineScope) {
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
-                modifier = Modifier.padding(16.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
+                modifier = Modifier.padding(horizontal = 12.dp)
             ) {
-                Text(
-                    text = statusText,
-                    fontSize = if (isAlarm) 26.sp else 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
-                Button(
-                    onClick = {
-                        if (!loading && status != null && !error) {
-                            loading = true
-                            scope.launch {
-                                try {
-                                    if (isArmed || isAlarm) api.disarm()
-                                    else api.arm(ArmRequest(4))
-                                    delay(500)
-                                    status = withContext(Dispatchers.IO) { api.status() }
-                                } catch (e: Exception) {
-                                    error = true
-                                } finally {
-                                    loading = false
+                // Status + Timer rectangle
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(statusBoxColor)
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = statusText,
+                            fontSize = if (isAlarm) 24.sp else 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                        if (timerText != null) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = timerText,
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.75f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+
+                // Arm / Disarm buttons
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Arm button
+                    Chip(
+                        onClick = {
+                            if (!loading && status != null && !error && !isArmed && !isAlarm) {
+                                loading = true
+                                scope.launch {
+                                    try {
+                                        api.arm(ArmRequest(4))
+                                        delay(500)
+                                        status = withContext(Dispatchers.IO) { api.status() }
+                                    } catch (e: Exception) { error = true }
+                                    finally { loading = false }
                                 }
                             }
+                        },
+                        enabled = !loading && status != null && !error && !isArmed && !isAlarm,
+                        colors = ChipDefaults.chipColors(
+                            backgroundColor = Color(0xFF2E7D32),
+                            disabledBackgroundColor = Color(0xFF1B3A1C)
+                        ),
+                        modifier = Modifier.weight(1f).height(40.dp),
+                        label = {
+                            Text(
+                                "דרוך",
+                                color = if (!isArmed && !isAlarm && status != null && !error)
+                                    Color.White else Color.White.copy(alpha = 0.4f),
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
-                    },
-                    enabled = !loading && status != null && !error,
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = if (isArmed || isAlarm) Color(0xFFE53935) else Color(0xFF43A047)
-                    ),
-                    modifier = Modifier.size(90.dp, 44.dp)
-                ) {
-                    if (loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            indicatorColor = Color.White
-                        )
-                    } else {
-                        Text(
-                            text = if (isArmed || isAlarm) "נטרל" else "דרוך",
-                            color = Color.White,
-                            fontSize = 15.sp
-                        )
-                    }
+                    )
+
+                    // Disarm button
+                    Chip(
+                        onClick = {
+                            if (!loading && status != null && !error && (isArmed || isAlarm)) {
+                                loading = true
+                                scope.launch {
+                                    try {
+                                        api.disarm()
+                                        delay(500)
+                                        status = withContext(Dispatchers.IO) { api.status() }
+                                    } catch (e: Exception) { error = true }
+                                    finally { loading = false }
+                                }
+                            }
+                        },
+                        enabled = !loading && status != null && !error && (isArmed || isAlarm),
+                        colors = ChipDefaults.chipColors(
+                            backgroundColor = Color(0xFFC62828),
+                            disabledBackgroundColor = Color(0xFF3A1A1A)
+                        ),
+                        modifier = Modifier.weight(1f).height(40.dp),
+                        label = {
+                            Text(
+                                "נטרל",
+                                color = if (isArmed || isAlarm) Color.White else Color.White.copy(alpha = 0.4f),
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    )
+                }
+
+                // Loading indicator
+                if (loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        indicatorColor = Color.White.copy(alpha = 0.6f)
+                    )
                 }
             }
         }
