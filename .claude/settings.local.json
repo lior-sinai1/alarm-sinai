@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"c:\\\\Users\\\\alexandern\\\\alarm-sinai\" status)",
+      "Bash(git -C \"c:\\\\Users\\\\alexandern\\\\alarm-sinai\" diff)",
+      "Bash(git -C \"c:\\\\Users\\\\alexandern\\\\alarm-sinai\" add android/app/build.gradle.kts android/wear/build.gradle.kts)",
+      "Bash(git -C 'c:\\\\Users\\\\alexandern\\\\alarm-sinai' commit -m ' *)",
+      "Bash(git -C \"c:\\\\Users\\\\alexandern\\\\alarm-sinai\" add android/app/src/main/java/com/alarmsinai/ui/screens/ControlScreen.kt)",
+      "Bash(git -C \"c:\\\\Users\\\\alexandern\\\\alarm-sinai\" add .claude/settings.local.json)"
+    ]
+  }
+}
