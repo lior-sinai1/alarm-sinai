@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C 'c:\\\\Users\\\\alexandern\\\\alarm-sinai' commit -m ' *)",
+      "Bash(git -C \"c:\\\\Users\\\\alexandern\\\\alarm-sinai\" add .claude/settings.json)"
+    ]
+  }
+}
