@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.alarmsinai.BuildConfig
 import com.alarmsinai.data.model.SENSOR_NAMES
 import com.alarmsinai.data.model.StatusResponse
 import com.alarmsinai.ui.theme.AlarmGray
@@ -141,6 +142,8 @@ private fun ConnectionBadge(connected: Boolean) {
         }
         Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 12.sp, color = color)
+        Spacer(Modifier.width(10.dp))
+        Text("v${BuildConfig.VERSION_NAME}", fontSize = 11.sp, color = Color.Gray)
     }
 }
 
