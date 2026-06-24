@@ -46,6 +46,7 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     val mw2Running: StateFlow<Boolean> = _mw2Running.asStateFlow()
 
     private var pollJob: Job? = null
+    private var bypassUpdatePending = false
     private var prevM175: Int? = null
     private var prevM19: Int? = null
     private var prevMw1: Int? = null
@@ -110,9 +111,11 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         prevMw1 = s.mw1
         prevMw2 = s.mw2
 
-        // Sync disabled-sensors display set from PLC bypass state
-        val bypassed = s.bypasses.filter { it.value == 1 }.keys.toSet()
-        _disabledSensors.value = bypassed
+        // Sync disabled-sensors display set from PLC bypass state (skip while a write is in flight)
+        if (!bypassUpdatePending) {
+            val bypassed = s.bypasses.filter { it.value == 1 }.keys.toSet()
+            _disabledSensors.value = bypassed
+        }
     }
 
     private fun addHistoryEvent(type: String, title: String, body: String) {
@@ -151,6 +154,7 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         val updated = _disabledSensors.value.toMutableSet()
         if (newValue) updated.add(addr) else updated.remove(addr)
         _disabledSensors.value = updated
+        bypassUpdatePending = true
         viewModelScope.launch {
             try {
                 repository.writeCoil(bypassCoil, newValue)
@@ -160,6 +164,8 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
                 if (!newValue) reverted.add(addr) else reverted.remove(addr)
                 _disabledSensors.value = reverted
                 _commandError.value = "שגיאה: ${e.message}"
+            } finally {
+                bypassUpdatePending = false
             }
         }
     }
