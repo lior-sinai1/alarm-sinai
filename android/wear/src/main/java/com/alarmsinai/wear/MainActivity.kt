@@ -7,7 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,7 +27,24 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 
-data class StatusResponse(val ok: Boolean, val connected: Boolean, val m175: Int, val m19: Int)
+data class StatusResponse(
+    val ok: Boolean,
+    val connected: Boolean,
+    val m175: Int,
+    val m19: Int,
+    val sensors: Map<String, Int> = emptyMap(),
+    val bypasses: Map<String, Int> = emptyMap()
+)
+
+val SENSOR_NAMES = mapOf(
+    "182" to "דלת כניסה", "201" to "חלון מטבח", "202" to "דלת מטבח",
+    "203" to "ויטרינה סלון", "204" to "הגנת צופר", "205" to "חלון הורים מזרחי ימין",
+    "206" to "חלון הורים מזרחי שמאלי", "207" to "חלון הורים צפוני חזית", "208" to "סלון",
+    "209" to "פרגולה", "210" to "חלון רחצה הורים", "211" to "חדר הורים",
+    "212" to "ממ\"ד", "213" to "רחבת חדרים קומה א'", "214" to "דלת מרפסת קומה א'",
+    "215" to "חדר נוף חלון מערבי", "216" to "חדר נוף ויטרינה", "217" to "חדר נוף חלון מזרחי",
+    "218" to "חלון חדר כביסה", "219" to "מרפסת קומה א'", "222" to "חלון סלון"
+)
 data class ArmRequest(val zone: Int)
 data class GenericResponse(val ok: Boolean)
 
@@ -94,6 +113,11 @@ fun WearApp(api: WearApiService) {
     val isArmed = status?.m175 == 1
     val isAlarm = status?.m19 == 1
 
+    val breachedSensors: List<String> = status?.sensors
+        ?.filter { (addr, value) -> value == 1 && (status?.bypasses?.get(addr) ?: 0) != 1 }
+        ?.map { (addr, _) -> SENSOR_NAMES[addr] ?: "M$addr" }
+        ?: emptyList()
+
     val bgColor = when {
         error   -> Color(0xFF1A1A1A)
         isAlarm -> Color(0xFF1A0000)
@@ -129,8 +153,10 @@ fun WearApp(api: WearApiService) {
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
-                modifier = Modifier.padding(horizontal = 12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 Box(
                     modifier = Modifier
@@ -157,6 +183,33 @@ fun WearApp(api: WearApiService) {
                                 color = Color.White.copy(alpha = 0.75f),
                                 textAlign = TextAlign.Center
                             )
+                        }
+                    }
+                }
+
+                if (breachedSensors.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF2A1A00))
+                            .border(1.dp, Color(0xFFFF6F00).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "פרוצים (${breachedSensors.size})",
+                                fontSize = 10.sp,
+                                color = Color(0xFFFF6F00),
+                                fontWeight = FontWeight.Bold
+                            )
+                            breachedSensors.forEach { name ->
+                                Text(
+                                    text = "• $name",
+                                    fontSize = 10.sp,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
                         }
                     }
                 }
