@@ -158,6 +158,8 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 repository.writeCoil(bypassCoil, newValue)
+                // Hold off sync until server has re-polled PLC and Android has fetched it (~2 cycles)
+                delay(3_000)
             } catch (e: Exception) {
                 // Revert optimistic update on failure
                 val reverted = _disabledSensors.value.toMutableSet()

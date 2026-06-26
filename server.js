@@ -17,13 +17,23 @@ const PORT                = 3000;
 const TOKENS_FILE         = path.join(__dirname, 'fcm-tokens.json');
 const SERVICE_ACCOUNT_FILE = path.join(__dirname, 'firebase-service-account.json');
 
-// ─── Bypass map: sensor coil address → bypass coil (M50–M75) ─────────────────
+// ─── Bypass map: sensor app-key → bypass coil (M50–M75) ──────────────────────
 const BYPASS_MAP = {
   182: 50, 201: 51, 202: 52, 203: 53, 204: 54,
   205: 55, 206: 56, 207: 57, 208: 58, 209: 59,
   210: 60, 211: 61, 212: 62, 213: 63, 214: 64,
   215: 65, 216: 66, 217: 67, 218: 68, 219: 69,
   222: 75,
+};
+
+// ─── Real-time sensor coil map: app-key → actual PLC coil (M183 / M301-M322) ─
+// PLC stores LDN %Ix.x → %Mxxx (1 = sensor OPEN/triggered, real-time, non-latching)
+const SENSOR_COIL_MAP = {
+  182: 183,                                                    // M183 = NOT I0.1 (entry door)
+  201: 301, 202: 302, 203: 303, 204: 304, 205: 305,           // M301-M305
+  206: 306, 207: 307, 208: 308, 209: 309, 210: 310,           // M306-M310
+  211: 311, 212: 312, 213: 313, 214: 314, 215: 315,           // M311-M315
+  216: 316, 217: 317, 218: 318, 219: 319, 222: 322,           // M316-M322
 };
 
 // ─── Sensor map: Modbus coil address → display name ───────────────────────────
@@ -86,6 +96,14 @@ const client = new ModbusRTU();
 let connected = false;
 let reconnecting = false;
 
+// Prevents simultaneous poll + write on the same TCP connection
+let modbusBusy = false;
+async function withModbus(fn) {
+  while (modbusBusy) await new Promise(r => setTimeout(r, 20));
+  modbusBusy = true;
+  try { return await fn(); } finally { modbusBusy = false; }
+}
+
 async function connectModbus() {
   if (reconnecting) return;
   reconnecting = true;
@@ -107,6 +125,7 @@ async function connectModbus() {
 client.on('close', () => {
   if (connected) {
     connected = false;
+    cachedStatus = { ...cachedStatus, connected: false };
     console.warn('Modbus disconnected — reconnecting...');
     setTimeout(connectModbus, 2000);
   }
@@ -118,20 +137,21 @@ let prevM175 = null;
 let prevM19  = null;
 
 async function readStatus() {
-  const [armed, alarm] = await Promise.all([
-    client.readCoils(175, 1),
-    client.readCoils(19, 1),
-  ]);
-
+  const armed    = await client.readCoils(175, 1);
+  const alarm    = await client.readCoils(19, 1);
   const timerReg = await client.readHoldingRegisters(1, 2);
-
-  // Coils 182–222 = 41 coils, covers all sensor addresses
-  const sensorBlock = await client.readCoils(182, 41);
+  // Real-time sensor state: M183 (entry door) and M301-M322
+  const entryDoor   = await client.readCoils(183, 1);
+  const sensorBlock = await client.readCoils(301, 22);
 
   const sensors = {};
   for (const addr of Object.keys(SENSOR_MAP)) {
-    const idx = Number(addr) - 182;
-    sensors[addr] = sensorBlock.data[idx] ? 1 : 0;
+    const plcCoil = SENSOR_COIL_MAP[Number(addr)];
+    if (plcCoil === 183) {
+      sensors[addr] = entryDoor.data[0] ? 1 : 0;
+    } else {
+      sensors[addr] = sensorBlock.data[plcCoil - 301] ? 1 : 0;
+    }
   }
 
   // Bypass coils M50–M75 (read 26 coils; M70–M74 unused)
@@ -156,12 +176,13 @@ async function readStatus() {
 async function pollOnce() {
   if (!connected) return;
   try {
-    const status = await readStatus();
+    const status = await withModbus(() => readStatus());
     await detectChanges(status);
     cachedStatus = status;
   } catch (err) {
     console.error('Poll error:', err.message);
     connected = false;
+    cachedStatus = { ...cachedStatus, connected: false };
     setTimeout(connectModbus, 2000);
   }
 }
@@ -209,9 +230,11 @@ async function sendPush(title, body, type) {
 
 // ─── Modbus pulse (300 ms ON → OFF) ──────────────────────────────────────────
 async function pulse(coil) {
-  await client.writeCoil(coil, true);
-  await new Promise(r => setTimeout(r, 300));
-  await client.writeCoil(coil, false);
+  await withModbus(async () => {
+    await client.writeCoil(coil, true);
+    await new Promise(r => setTimeout(r, 300));
+    await client.writeCoil(coil, false);
+  });
 }
 
 // ─── HTTP routes ──────────────────────────────────────────────────────────────
@@ -260,7 +283,7 @@ app.post('/write-coil', async (req, res) => {
   if (!connected)
     return res.status(503).json({ ok: false, error: 'PLC not connected' });
   try {
-    await client.writeCoil(coil, value);
+    await withModbus(() => client.writeCoil(coil, value));
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
