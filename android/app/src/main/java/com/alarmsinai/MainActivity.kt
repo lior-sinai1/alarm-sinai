@@ -167,11 +167,12 @@ private fun AlarmApp(
             }
         }
     ) { padding ->
-        when (selectedTab) {
-            0 -> ControlScreen(vm = vm)
-            1 -> HistoryScreen(vm = vm)
-            2 -> SensorsScreen(vm = vm)
+        androidx.compose.foundation.layout.Box(Modifier.padding(padding)) {
+            when (selectedTab) {
+                0 -> ControlScreen(vm = vm)
+                1 -> HistoryScreen(vm = vm)
+                2 -> SensorsScreen(vm = vm)
+            }
         }
-        androidx.compose.foundation.layout.Box(Modifier.padding(padding)) {}
     }
 }
