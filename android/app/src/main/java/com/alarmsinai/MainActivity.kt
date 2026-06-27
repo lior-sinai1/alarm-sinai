@@ -85,7 +85,11 @@ class MainActivity : ComponentActivity() {
         sirenJob = null
     }
 
-    override fun onResume() { super.onResume(); vm.startPolling() }
+    override fun onResume() {
+        super.onResume()
+        vm.startPolling()
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).cancelAll()
+    }
     override fun onPause()  { super.onPause();  vm.stopPolling()  }
     override fun onStop() {
         super.onStop()

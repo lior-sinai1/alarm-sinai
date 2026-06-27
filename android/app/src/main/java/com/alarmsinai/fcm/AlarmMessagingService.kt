@@ -60,6 +60,7 @@ class AlarmMessagingService : FirebaseMessagingService() {
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
                     .setFullScreenIntent(fullScreenIntent, true)
+                    .setNumber(1)
                     .build()
                 val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 nm.notify(1001, notif)

@@ -70,7 +70,7 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
                     _connectionError.value = false
                     failCount = 0
                     detectChanges(s)
-                    delay(1_000)
+                    delay(5_000)
                 } catch (_: Exception) {
                     _connectionError.value = true
                     failCount++

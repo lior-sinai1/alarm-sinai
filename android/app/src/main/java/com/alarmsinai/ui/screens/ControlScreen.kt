@@ -46,16 +46,17 @@ fun ControlScreen(vm: AlarmViewModel) {
     val mw1Running by vm.mw1Running.collectAsState()
     val mw2Running by vm.mw2Running.collectAsState()
 
-    // Local countdown — syncs from server, ticks every 500ms for smooth display
+    // Local countdown ticks every 1 s independently.
+    // Every 5 s the server poll syncs mw1/mw2 from the PLC (single correction point).
     var mw1 by remember { mutableIntStateOf(serverMw1) }
     var mw2 by remember { mutableIntStateOf(serverMw2) }
     LaunchedEffect(serverMw1) { mw1 = serverMw1 }
     LaunchedEffect(serverMw2) { mw2 = serverMw2 }
     LaunchedEffect(mw1Running) {
-        while (mw1Running) { kotlinx.coroutines.delay(500); if (mw1 > 0) mw1-- }
+        while (mw1Running) { kotlinx.coroutines.delay(1_000); if (mw1 > 0) mw1-- }
     }
     LaunchedEffect(mw2Running) {
-        while (mw2Running) { kotlinx.coroutines.delay(500); if (mw2 > 0) mw2-- }
+        while (mw2Running) { kotlinx.coroutines.delay(1_000); if (mw2 > 0) mw2-- }
     }
 
     val breachedSensors = status?.sensors
