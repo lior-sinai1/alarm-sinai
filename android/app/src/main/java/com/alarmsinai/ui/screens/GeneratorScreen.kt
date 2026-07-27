@@ -284,8 +284,8 @@ private fun OilPressureIcon(tint: Color, modifier: Modifier = Modifier) {
         val dropTopY = h * 0.44f
         val drop = Path().apply {
             moveTo(dropCx, dropTopY)
-            quadraticTo(dropCx + w * 0.09f, h * 0.62f, dropCx, h * 0.78f)
-            quadraticTo(dropCx - w * 0.09f, h * 0.62f, dropCx, dropTopY)
+            quadraticBezierTo(dropCx + w * 0.09f, h * 0.62f, dropCx, h * 0.78f)
+            quadraticBezierTo(dropCx - w * 0.09f, h * 0.62f, dropCx, dropTopY)
             close()
         }
         drawPath(drop, color = tint)
@@ -332,7 +332,7 @@ private fun EngineTempIcon(tint: Color, modifier: Modifier = Modifier) {
             var up = true
             while (x < w) {
                 val nextX = (x + step).coerceAtMost(w)
-                path.quadraticTo(x + step / 2f, yBase + (if (up) -amp else amp), nextX, yBase)
+                path.quadraticBezierTo(x + step / 2f, yBase + (if (up) -amp else amp), nextX, yBase)
                 up = !up
                 x = nextX
             }
