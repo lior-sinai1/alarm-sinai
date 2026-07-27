@@ -3,23 +3,30 @@ package com.alarmsinai.ui.screens
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,30 +53,40 @@ fun GeneratorScreen(vm: AlarmViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("גנרטור", style = MaterialTheme.typography.titleLarge)
-
+        FaultIconsRow(gen)
         ModeCard(gen)
+    }
+}
 
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                "מצב תפעולי",
-                style = MaterialTheme.typography.titleSmall,
-                color = Color.Gray,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            StatusRow("מתח רשת", state = boolState(gen?.mains))
-            StatusRow("מתח גנרטור", state = StateInfo.Unavailable)
-            StatusRow("גנרטור מונע", state = StateInfo.Unavailable)
-            StatusRow("תקלה בגנרטור", state = boolState(gen?.fault, invert = true))
-            StatusRow(
-                "לחץ שמן מנוע",
-                state = boolState(gen?.oilPressure, invert = true),
-                icon = { tint -> OilPressureIcon(tint) }
-            )
-            StatusRow(
-                "חום מנוע",
-                state = boolState(gen?.engineTemp, invert = true),
-                icon = { tint -> EngineTempIcon(tint) }
-            )
+private val oilFault: (GeneratorStatus?) -> Boolean = { it != null && it.fault && !it.oilPressure }
+private val tempFault: (GeneratorStatus?) -> Boolean = { it != null && it.fault && it.engineTemp }
+
+// Priority order: active faults override the mode/power text.
+private fun statusLine(gen: GeneratorStatus?): Pair<String, Color> = when {
+    gen == null -> "מתחבר..." to AlarmGray
+    oilFault(gen) -> "לחץ שמן נמוך" to AlarmRed
+    tempFault(gen) -> "חום מנוע" to AlarmRed
+    gen.disabled -> "גנרטור מושבת" to AlarmGray
+    gen.maintenance -> "טיפול" to AlarmOrange
+    gen.manual -> "גנרטור פועל ידני" to AlarmOrange
+    gen.automatic && gen.mains -> "מתח רשת" to AlarmGreen
+    gen.automatic && !gen.mains -> "מתח גנרטור" to AlarmGreen
+    else -> "לא ידוע" to AlarmGray
+}
+
+@Composable
+private fun FaultIconsRow(gen: GeneratorStatus?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            OilPressureIcon(tint = if (oilFault(gen)) AlarmRed else Color.Gray, modifier = Modifier.size(40.dp))
+            EngineTempIcon(tint = if (tempFault(gen)) AlarmRed else Color.Gray, modifier = Modifier.size(40.dp))
         }
     }
 }
@@ -101,6 +118,7 @@ private fun ModeCard(gen: GeneratorStatus?) {
         animationSpec = tween(400),
         label = "knobAngle"
     )
+    val (statusText, statusColor) = statusLine(gen)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -111,8 +129,14 @@ private fun ModeCard(gen: GeneratorStatus?) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("מצב פעולה", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            Spacer(Modifier.height(12.dp))
+            Text(
+                statusText,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = statusColor,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(16.dp))
             Box(
                 modifier = Modifier.size(220.dp, 190.dp),
                 contentAlignment = Alignment.Center
@@ -142,103 +166,62 @@ private fun ModeCard(gen: GeneratorStatus?) {
 
 @Composable
 private fun SelectorKnob(angleDegrees: Float) {
-    Canvas(
+    // Static ring plate (does not rotate) — gives the white frame around the knob.
+    Box(
         modifier = Modifier
-            .size(76.dp)
-            .graphicsLayer { rotationZ = angleDegrees }
+            .size(92.dp)
+            .shadow(elevation = 8.dp, shape = CircleShape)
+            .clip(CircleShape)
+            .background(Color(0xFF2A2A2A))
+            .border(width = 3.dp, color = Color.White, shape = CircleShape),
+        contentAlignment = Alignment.Center
     ) {
-        val knobColor = Color(0xFF1C1C1C)
-        val radius = size.minDimension / 2f
-        val center = Offset(size.width / 2f, size.height / 2f)
-
-        // Round base of the knob
-        drawCircle(color = knobColor, radius = radius * 0.62f, center = center)
-
-        // The pointing "blade" — extends up from the base towards the active position
-        val bladeWidth = radius * 1.05f
-        val bladeHeight = radius * 1.35f
-        drawRoundRect(
-            color = knobColor,
-            topLeft = Offset(center.x - bladeWidth / 2f, center.y - bladeHeight),
-            size = Size(bladeWidth, bladeHeight * 0.85f),
-            cornerRadius = CornerRadius(bladeWidth / 2f, bladeWidth / 2f)
-        )
-
-        // White indicator stripe down the blade
-        drawLine(
-            color = Color.White,
-            start = Offset(center.x, center.y - radius * 0.15f),
-            end = Offset(center.x, center.y - bladeHeight * 0.78f),
-            strokeWidth = bladeWidth * 0.24f,
-            cap = StrokeCap.Round
-        )
-    }
-}
-
-private sealed class StateInfo {
-    data class On(val label: String, val color: Color) : StateInfo()
-    object Unavailable : StateInfo()
-}
-
-// `invert` = true means "value == true" is a bad/alert condition (e.g. a fault bit)
-// rather than a normal "yes" condition (e.g. mains voltage present).
-private fun boolState(value: Boolean?, invert: Boolean = false): StateInfo {
-    if (value == null) return StateInfo.On("--", AlarmGray)
-    return when {
-        value && invert  -> StateInfo.On("פעיל", AlarmRed)
-        value            -> StateInfo.On("כן", AlarmGreen)
-        invert           -> StateInfo.On("תקין", AlarmGray)
-        else             -> StateInfo.On("לא", AlarmGray)
-    }
-}
-
-@Composable
-private fun StatusRow(
-    name: String,
-    state: StateInfo,
-    icon: (@Composable (tint: Color) -> Unit)? = null
-) {
-    val iconTint = when (state) {
-        is StateInfo.On -> state.color
-        is StateInfo.Unavailable -> Color.Gray
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(
-                alpha = if (state is StateInfo.Unavailable) 0.5f else 1f
-            )
-        )
-    ) {
-        Row(
+        Canvas(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .size(76.dp)
+                .graphicsLayer { rotationZ = angleDegrees }
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                icon?.invoke(iconTint)
-                Text(name, color = Color.White)
-            }
-            when (state) {
-                is StateInfo.Unavailable -> Text("לא זמין", color = Color.Gray, fontSize = 13.sp)
-                is StateInfo.On -> Text(state.label, color = state.color, fontWeight = FontWeight.Bold)
-            }
+            val radius = size.minDimension / 2f
+            val center = Offset(size.width / 2f, size.height / 2f)
+            // Embossed radial gradient — lighter towards the top-left, darker towards
+            // the bottom-right, to read as a raised, physical knob face.
+            val knobBrush = Brush.radialGradient(
+                colors = listOf(Color(0xFF4A4A4A), Color(0xFF0E0E0E)),
+                center = Offset(center.x - radius * 0.35f, center.y - radius * 0.35f),
+                radius = radius * 1.6f
+            )
+
+            // Round base of the knob
+            drawCircle(brush = knobBrush, radius = radius * 0.62f, center = center)
+
+            // The pointing "blade" — extends up from the base towards the active position
+            val bladeWidth = radius * 1.05f
+            val bladeHeight = radius * 1.35f
+            drawRoundRect(
+                brush = knobBrush,
+                topLeft = Offset(center.x - bladeWidth / 2f, center.y - bladeHeight),
+                size = Size(bladeWidth, bladeHeight * 0.85f),
+                cornerRadius = CornerRadius(bladeWidth / 2f, bladeWidth / 2f)
+            )
+
+            // White indicator stripe down the blade
+            drawLine(
+                color = Color.White,
+                start = Offset(center.x, center.y - radius * 0.15f),
+                end = Offset(center.x, center.y - bladeHeight * 0.78f),
+                strokeWidth = bladeWidth * 0.24f,
+                cap = StrokeCap.Round
+            )
         }
     }
 }
 
 // Dashboard-style telltale icons: oil-can-with-drip (oil pressure) and
 // thermometer-over-water (engine temperature), matching the reference
-// warning-light icons. Drawn as vector paths so they tint with the row state.
+// warning-light icons. Drawn as vector paths so they tint with the current fault state.
 @Composable
 private fun OilPressureIcon(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(26.dp)) {
+    Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
         val strokeWidth = w * 0.10f
@@ -294,7 +277,7 @@ private fun OilPressureIcon(tint: Color, modifier: Modifier = Modifier) {
 
 @Composable
 private fun EngineTempIcon(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(26.dp)) {
+    Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
         val stemStroke = w * 0.16f
@@ -323,7 +306,7 @@ private fun EngineTempIcon(tint: Color, modifier: Modifier = Modifier) {
 
         // Wavy water lines below
         val waveStroke = Stroke(width = w * 0.06f, cap = StrokeCap.Round)
-        val wave: androidx.compose.ui.graphics.drawscope.DrawScope.(Float) -> Unit = { yFrac ->
+        val wave: DrawScope.(Float) -> Unit = { yFrac ->
             val amp = h * 0.045f
             val yBase = h * yFrac
             val step = w / 4f
