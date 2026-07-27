@@ -1,7 +1,6 @@
 package com.alarmsinai.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -119,7 +118,7 @@ private data class SwitchPosition(val label: String, val angle: Float, val color
 
 private val SWITCH_POSITIONS = listOf(
     SwitchPosition("מנוטרל", -67.5f, AlarmGray),
-    SwitchPosition("אוטומטי", -22.5f, AlarmGreen),
+    SwitchPosition("אוטו", -22.5f, AlarmGreen),
     SwitchPosition("ידני", 22.5f, AlarmOrange),
     SwitchPosition("טיפול", 67.5f, AlarmOrange),
 )
@@ -170,15 +169,34 @@ private fun ModeCard(gen: GeneratorStatus?) {
                         textAlign = TextAlign.Center
                     )
                 }
-                SelectorKnob(angleDegrees = animatedAngle)
+                SelectorKnob(angleDegrees = animatedAngle, activeIndex = activeIndex)
             }
         }
     }
 }
 
+// Illuminated-lens colors per mode. Automatic stays lit solid green;
+// every other mode blinks in its own color (manual/disabled = red, maintenance = blue).
+private fun lensColorFor(activeIndex: Int): Pair<Color, Boolean> = when (activeIndex) {
+    0 -> AlarmRed to true                 // disabled — red, blinking
+    1 -> AlarmGreen to false              // automatic — green, solid
+    2 -> AlarmRed to true                 // manual — red, blinking
+    3 -> Color(0xFF2979FF) to true        // maintenance — blue, blinking
+    else -> Color.Gray to false
+}
+
 @Composable
-private fun SelectorKnob(angleDegrees: Float) {
-    // Static chrome bezel (does not rotate) — mimics the metal mounting ring
+private fun SelectorKnob(angleDegrees: Float, activeIndex: Int) {
+    val (lensColor, blinking) = lensColorFor(activeIndex)
+    val infinite = rememberInfiniteTransition(label = "knobBlink")
+    val blinkAlpha by infinite.animateFloat(
+        initialValue = 1f,
+        targetValue = if (blinking) 0.2f else 1f,
+        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+        label = "blinkAlpha"
+    )
+
+    // Static dark bezel (does not rotate) — mimics the plastic mounting ring
     // of a physical panel-mount selector switch.
     Box(
         modifier = Modifier
@@ -187,15 +205,10 @@ private fun SelectorKnob(angleDegrees: Float) {
             .clip(CircleShape)
             .background(
                 Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFF2F2F2),
-                        Color(0xFFC7C7C7),
-                        Color(0xFF8A8A8A),
-                        Color(0xFF5C5C5C)
-                    )
+                    colors = listOf(Color(0xFF3C3C3C), Color(0xFF1A1A1A))
                 )
             )
-            .border(width = 1.dp, color = Color(0xFF3A3A3A), shape = CircleShape),
+            .border(width = 2.dp, color = Color(0xFF0A0A0A), shape = CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(
@@ -205,11 +218,6 @@ private fun SelectorKnob(angleDegrees: Float) {
         ) {
             val radius = size.minDimension / 2f
             val center = Offset(size.width / 2f, size.height / 2f)
-            val knobBrush = Brush.radialGradient(
-                colors = listOf(Color(0xFF3A3A3A), Color(0xFF0D0D0D)),
-                center = Offset(center.x - radius * 0.35f, center.y - radius * 0.35f),
-                radius = radius * 1.6f
-            )
 
             // Paddle-shaped lever — narrow at the hub, flaring wider towards the
             // rounded tip, matching the physical selector-switch lever shape.
@@ -232,14 +240,33 @@ private fun SelectorKnob(angleDegrees: Float) {
                 )
                 close()
             }
-            drawPath(paddle, brush = knobBrush)
 
-            // White indicator stripe down the paddle
+            // Translucent illuminated lens — a soft glow behind a semi-transparent fill
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        lensColor.copy(alpha = 0.55f * blinkAlpha),
+                        lensColor.copy(alpha = 0f)
+                    ),
+                    center = Offset(center.x, center.y - length * 0.55f),
+                    radius = radius * 1.3f
+                ),
+                radius = radius * 1.3f,
+                center = Offset(center.x, center.y - length * 0.55f)
+            )
+            drawPath(paddle, color = lensColor.copy(alpha = 0.6f * blinkAlpha))
+            drawPath(
+                paddle,
+                color = Color.Black.copy(alpha = 0.55f),
+                style = Stroke(width = radius * 0.06f)
+            )
+
+            // Soft highlight streak down the paddle, like light through translucent plastic
             drawLine(
-                color = Color.White,
+                color = Color.White.copy(alpha = 0.5f * blinkAlpha),
                 start = Offset(center.x, center.y - length * 0.15f),
-                end = Offset(center.x, center.y - length * 0.88f),
-                strokeWidth = tipWidth * 0.22f,
+                end = Offset(center.x, center.y - length * 0.85f),
+                strokeWidth = tipWidth * 0.16f,
                 cap = StrokeCap.Round
             )
         }
