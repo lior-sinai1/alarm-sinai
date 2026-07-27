@@ -16,9 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -27,8 +25,10 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alarmsinai.data.model.GeneratorStatus
@@ -53,7 +53,7 @@ fun GeneratorScreen(vm: AlarmViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("גנרטור", style = MaterialTheme.typography.titleLarge)
-        FaultIconsRow(gen)
+        TopStatusCard(gen)
         ModeCard(gen)
     }
 }
@@ -75,18 +75,40 @@ private fun statusLine(gen: GeneratorStatus?): Pair<String, Color> = when {
 }
 
 @Composable
-private fun FaultIconsRow(gen: GeneratorStatus?) {
+private fun TopStatusCard(gen: GeneratorStatus?) {
+    val (statusText, statusColor) = statusLine(gen)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            OilPressureIcon(tint = if (oilFault(gen)) AlarmRed else Color.Gray, modifier = Modifier.size(40.dp))
-            EngineTempIcon(tint = if (tempFault(gen)) AlarmRed else Color.Gray, modifier = Modifier.size(40.dp))
+        // Forced LTR so the icon column always pins to the literal left edge,
+        // regardless of the app's RTL (Hebrew) layout direction.
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OilPressureIcon(
+                        tint = if (oilFault(gen)) AlarmRed else Color.Gray,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    EngineTempIcon(
+                        tint = if (tempFault(gen)) AlarmRed else Color.Gray,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Text(
+                    statusText,
+                    modifier = Modifier.weight(1f).padding(start = 16.dp),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -118,8 +140,6 @@ private fun ModeCard(gen: GeneratorStatus?) {
         animationSpec = tween(400),
         label = "knobAngle"
     )
-    val (statusText, statusColor) = statusLine(gen)
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -129,14 +149,6 @@ private fun ModeCard(gen: GeneratorStatus?) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                statusText,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = statusColor,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(16.dp))
             Box(
                 modifier = Modifier.size(220.dp, 190.dp),
                 contentAlignment = Alignment.Center
@@ -166,50 +178,68 @@ private fun ModeCard(gen: GeneratorStatus?) {
 
 @Composable
 private fun SelectorKnob(angleDegrees: Float) {
-    // Static ring plate (does not rotate) — gives the white frame around the knob.
+    // Static chrome bezel (does not rotate) — mimics the metal mounting ring
+    // of a physical panel-mount selector switch.
     Box(
         modifier = Modifier
             .size(92.dp)
             .shadow(elevation = 8.dp, shape = CircleShape)
             .clip(CircleShape)
-            .background(Color(0xFF2A2A2A))
-            .border(width = 3.dp, color = Color.White, shape = CircleShape),
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFF2F2F2),
+                        Color(0xFFC7C7C7),
+                        Color(0xFF8A8A8A),
+                        Color(0xFF5C5C5C)
+                    )
+                )
+            )
+            .border(width = 1.dp, color = Color(0xFF3A3A3A), shape = CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Canvas(
             modifier = Modifier
-                .size(76.dp)
+                .size(64.dp)
                 .graphicsLayer { rotationZ = angleDegrees }
         ) {
             val radius = size.minDimension / 2f
             val center = Offset(size.width / 2f, size.height / 2f)
-            // Embossed radial gradient — lighter towards the top-left, darker towards
-            // the bottom-right, to read as a raised, physical knob face.
             val knobBrush = Brush.radialGradient(
-                colors = listOf(Color(0xFF4A4A4A), Color(0xFF0E0E0E)),
+                colors = listOf(Color(0xFF3A3A3A), Color(0xFF0D0D0D)),
                 center = Offset(center.x - radius * 0.35f, center.y - radius * 0.35f),
                 radius = radius * 1.6f
             )
 
-            // Round base of the knob
-            drawCircle(brush = knobBrush, radius = radius * 0.62f, center = center)
+            // Paddle-shaped lever — narrow at the hub, flaring wider towards the
+            // rounded tip, matching the physical selector-switch lever shape.
+            val hubWidth = radius * 0.55f
+            val tipWidth = radius * 0.95f
+            val length = radius * 1.35f
+            val hubY = center.y + hubWidth * 0.35f
 
-            // The pointing "blade" — extends up from the base towards the active position
-            val bladeWidth = radius * 1.05f
-            val bladeHeight = radius * 1.35f
-            drawRoundRect(
-                brush = knobBrush,
-                topLeft = Offset(center.x - bladeWidth / 2f, center.y - bladeHeight),
-                size = Size(bladeWidth, bladeHeight * 0.85f),
-                cornerRadius = CornerRadius(bladeWidth / 2f, bladeWidth / 2f)
-            )
+            val paddle = Path().apply {
+                moveTo(center.x - hubWidth / 2f, hubY)
+                lineTo(center.x - tipWidth / 2f, center.y - length)
+                quadraticBezierTo(
+                    center.x, center.y - length - tipWidth * 0.32f,
+                    center.x + tipWidth / 2f, center.y - length
+                )
+                lineTo(center.x + hubWidth / 2f, hubY)
+                quadraticBezierTo(
+                    center.x, hubY + hubWidth * 0.7f,
+                    center.x - hubWidth / 2f, hubY
+                )
+                close()
+            }
+            drawPath(paddle, brush = knobBrush)
 
-            // White indicator stripe down the blade
+            // White indicator stripe down the paddle
             drawLine(
                 color = Color.White,
-                start = Offset(center.x, center.y - radius * 0.15f),
-                end = Offset(center.x, center.y - bladeHeight * 0.78f),
-                strokeWidth = bladeWidth * 0.24f,
+                start = Offset(center.x, center.y - length * 0.15f),
+                end = Offset(center.x, center.y - length * 0.88f),
+                strokeWidth = tipWidth * 0.22f,
                 cap = StrokeCap.Round
             )
         }
@@ -227,44 +257,47 @@ private fun OilPressureIcon(tint: Color, modifier: Modifier = Modifier) {
         val strokeWidth = w * 0.10f
         val strokeStyle = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
 
-        // Can body
+        // Can body — hexagonal outline with an angled facet at the top-left
+        // (the handle cut) and a flat top where the filler cap sits.
         val body = Path().apply {
-            moveTo(w * 0.10f, h * 0.42f)
-            lineTo(w * 0.10f, h * 0.82f)
-            lineTo(w * 0.62f, h * 0.82f)
-            lineTo(w * 0.78f, h * 0.42f)
+            moveTo(w * 0.10f, h * 0.85f)
+            lineTo(w * 0.10f, h * 0.55f)
+            lineTo(w * 0.24f, h * 0.40f)
+            lineTo(w * 0.58f, h * 0.40f)
+            lineTo(w * 0.70f, h * 0.55f)
+            lineTo(w * 0.58f, h * 0.85f)
             close()
         }
         drawPath(body, color = tint, style = strokeStyle)
 
-        // Spout
+        // Spout — rises from the can's right shoulder out towards the drip
         drawLine(
             color = tint,
-            start = Offset(w * 0.62f, h * 0.42f),
-            end = Offset(w * 0.90f, h * 0.28f),
+            start = Offset(w * 0.66f, h * 0.50f),
+            end = Offset(w * 0.90f, h * 0.30f),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
 
-        // Cap / handle notch
-        val cap = Path().apply {
-            moveTo(w * 0.22f, h * 0.42f)
-            lineTo(w * 0.22f, h * 0.24f)
-            lineTo(w * 0.40f, h * 0.24f)
-            lineTo(w * 0.40f, h * 0.42f)
-        }
-        drawPath(cap, color = tint, style = strokeStyle)
+        // Filler cap — a "T" sitting centered on the flat top of the can
         drawLine(
             color = tint,
-            start = Offset(w * 0.31f, h * 0.24f),
-            end = Offset(w * 0.31f, h * 0.12f),
+            start = Offset(w * 0.46f, h * 0.40f),
+            end = Offset(w * 0.46f, h * 0.24f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = tint,
+            start = Offset(w * 0.36f, h * 0.24f),
+            end = Offset(w * 0.56f, h * 0.24f),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
 
         // Drip below the spout tip
-        val dropCx = w * 0.92f
-        val dropTopY = h * 0.44f
+        val dropCx = w * 0.90f
+        val dropTopY = h * 0.32f
         val drop = Path().apply {
             moveTo(dropCx, dropTopY)
             quadraticBezierTo(dropCx + w * 0.09f, h * 0.62f, dropCx, h * 0.78f)
