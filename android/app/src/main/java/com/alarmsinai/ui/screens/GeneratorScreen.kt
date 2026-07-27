@@ -42,6 +42,8 @@ import kotlin.math.sin
 @Composable
 fun GeneratorScreen(vm: AlarmViewModel) {
     val status by vm.status.collectAsState()
+    val error by vm.connectionError.collectAsState()
+    val connected = !error && status?.connected == true
     val gen = status?.generator
 
     Column(
@@ -52,7 +54,7 @@ fun GeneratorScreen(vm: AlarmViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("גנרטור", style = MaterialTheme.typography.titleLarge)
-        TopStatusCard(gen)
+        TopStatusCard(gen, connected)
         ModeCard(gen)
     }
 }
@@ -61,8 +63,8 @@ private val oilFault: (GeneratorStatus?) -> Boolean = { it != null && it.fault &
 private val tempFault: (GeneratorStatus?) -> Boolean = { it != null && it.fault && it.engineTemp }
 
 // Priority order: active faults override the mode/power text.
-private fun statusLine(gen: GeneratorStatus?): Pair<String, Color> = when {
-    gen == null -> "מתחבר..." to AlarmGray
+private fun statusLine(gen: GeneratorStatus?, connected: Boolean): Pair<String, Color> = when {
+    !connected || gen == null -> "מתחבר..." to AlarmGray
     oilFault(gen) -> "לחץ שמן נמוך" to AlarmRed
     tempFault(gen) -> "חום מנוע" to AlarmRed
     gen.disabled -> "גנרטור מושבת" to AlarmGray
@@ -74,8 +76,8 @@ private fun statusLine(gen: GeneratorStatus?): Pair<String, Color> = when {
 }
 
 @Composable
-private fun TopStatusCard(gen: GeneratorStatus?) {
-    val (statusText, statusColor) = statusLine(gen)
+private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
+    val (statusText, statusColor) = statusLine(gen, connected)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
