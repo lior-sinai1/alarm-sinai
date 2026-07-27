@@ -131,8 +131,12 @@ client.on('close', () => {
   }
 });
 
+// ─── Generator status coils: M330-M335 (mirrors added in PLC) + M352 (fault) ──
+// M330=מנוטרל M331=ידני M332=טיפול M333=מתח_רשת M334=לחץ_שמן M335=חום_מנוע
+const GENERATOR_COIL_BASE = 330;
+
 // ─── Status cache & polling ───────────────────────────────────────────────────
-let cachedStatus = { ok: false, connected: false, m175: 0, m19: 0, mw1: 0, sensors: {}, bypasses: {} };
+let cachedStatus = { ok: false, connected: false, m175: 0, m19: 0, mw1: 0, sensors: {}, bypasses: {}, generator: {} };
 let prevM175 = null;
 let prevM19  = null;
 
@@ -161,6 +165,21 @@ async function readStatus() {
     bypasses[sensorAddr] = bypassBlock.data[bypassCoil - 50] ? 1 : 0;
   }
 
+  // Generator mode/status coils M330-M335, plus fault coil M352
+  const generatorBlock = await client.readCoils(GENERATOR_COIL_BASE, 6);
+  const generatorFault = await client.readCoils(352, 1);
+  const [disabled, manual, maintenance, mains, oilPressure, engineTemp] = generatorBlock.data;
+  const generator = {
+    disabled,
+    manual,
+    maintenance,
+    automatic: !disabled && !manual && !maintenance,
+    mains,
+    oilPressure,
+    engineTemp,
+    fault: !!generatorFault.data[0],
+  };
+
   return {
     ok: true,
     connected: true,
@@ -170,6 +189,7 @@ async function readStatus() {
     mw2:  timerReg.data[1],
     sensors,
     bypasses,
+    generator,
   };
 }
 

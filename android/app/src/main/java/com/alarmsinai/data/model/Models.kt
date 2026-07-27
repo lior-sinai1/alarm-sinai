@@ -10,7 +10,19 @@ data class StatusResponse(
     val mw1: Int,
     val mw2: Int = 0,
     val sensors: Map<String, Int>,
-    val bypasses: Map<String, Int> = emptyMap()
+    val bypasses: Map<String, Int> = emptyMap(),
+    val generator: GeneratorStatus? = null
+)
+
+data class GeneratorStatus(
+    val disabled: Boolean = false,
+    val manual: Boolean = false,
+    val maintenance: Boolean = false,
+    val automatic: Boolean = false,
+    val mains: Boolean = false,
+    val oilPressure: Boolean = false,
+    val engineTemp: Boolean = false,
+    val fault: Boolean = false
 )
 
 data class ArmRequest(@SerializedName("zone") val zone: Int)

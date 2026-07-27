@@ -19,6 +19,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import com.alarmsinai.service.AlarmSoundService
 import com.alarmsinai.ui.screens.ControlScreen
+import com.alarmsinai.ui.screens.GeneratorScreen
 import com.alarmsinai.ui.screens.HistoryScreen
 import com.alarmsinai.ui.screens.SensorsScreen
 import com.alarmsinai.ui.theme.AlarmSinaiTheme
@@ -110,6 +112,7 @@ private val TABS = listOf(
     TabItem("בקרה",      Icons.Default.Home),
     TabItem("היסטוריה",  Icons.Default.List),
     TabItem("חיישנים",   Icons.Default.Settings),
+    TabItem("גנרטור",    Icons.Default.Bolt),
 )
 
 @Composable
@@ -176,6 +179,7 @@ private fun AlarmApp(
                 0 -> ControlScreen(vm = vm)
                 1 -> HistoryScreen(vm = vm)
                 2 -> SensorsScreen(vm = vm)
+                3 -> GeneratorScreen(vm = vm)
             }
         }
     }
