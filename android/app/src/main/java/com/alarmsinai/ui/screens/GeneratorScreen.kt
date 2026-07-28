@@ -119,10 +119,10 @@ private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
 private data class SwitchPosition(val label: String, val angle: Float, val color: Color)
 
 private val SWITCH_POSITIONS = listOf(
-    SwitchPosition("מנוטרל", -67.5f, AlarmGray),
+    SwitchPosition("מנוטרל", 67.5f, AlarmGray),
     SwitchPosition("אוטו", -22.5f, AlarmGreen),
     SwitchPosition("ידני", 22.5f, AlarmRed),
-    SwitchPosition("טיפול", 67.5f, AlarmOrange),
+    SwitchPosition("טיפול", -67.5f, AlarmOrange),
 )
 
 @Composable
@@ -150,28 +150,32 @@ private fun ModeCard(gen: GeneratorStatus?) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier.size(220.dp, 190.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                val labelRadius = 92.dp
-                SWITCH_POSITIONS.forEachIndexed { index, pos ->
-                    val rad = Math.toRadians(pos.angle.toDouble())
-                    val x = labelRadius * sin(rad).toFloat()
-                    val y = -labelRadius * cos(rad).toFloat()
-                    val active = index == activeIndex
-                    Text(
-                        pos.label,
-                        modifier = Modifier
-                            .offset(x = x, y = y)
-                            .widthIn(max = 64.dp),
-                        color = if (active) pos.color else Color.Gray,
-                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = if (active) 15.sp else 13.sp,
-                        textAlign = TextAlign.Center
-                    )
+            // Forced LTR so the label offsets (mirrored by Compose under RTL)
+            // stay aligned with the knob's rotationZ (never mirrored).
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Box(
+                    modifier = Modifier.size(220.dp, 190.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val labelRadius = 92.dp
+                    SWITCH_POSITIONS.forEachIndexed { index, pos ->
+                        val rad = Math.toRadians(pos.angle.toDouble())
+                        val x = labelRadius * sin(rad).toFloat()
+                        val y = -labelRadius * cos(rad).toFloat()
+                        val active = index == activeIndex
+                        Text(
+                            pos.label,
+                            modifier = Modifier
+                                .offset(x = x, y = y)
+                                .widthIn(max = 64.dp),
+                            color = if (active) pos.color else Color.Gray,
+                            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = if (active) 15.sp else 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    SelectorKnob(angleDegrees = animatedAngle, activeIndex = activeIndex)
                 }
-                SelectorKnob(angleDegrees = animatedAngle, activeIndex = activeIndex)
             }
         }
     }
