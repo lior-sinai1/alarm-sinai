@@ -59,8 +59,8 @@ fun GeneratorScreen(vm: AlarmViewModel) {
     }
 }
 
-private val oilFault: (GeneratorStatus?) -> Boolean = { it != null && it.fault && !it.oilPressure }
-private val tempFault: (GeneratorStatus?) -> Boolean = { it != null && it.fault && it.engineTemp }
+private val oilFault: (GeneratorStatus?) -> Boolean = { it != null && !it.oilPressure }
+private val tempFault: (GeneratorStatus?) -> Boolean = { it != null && it.engineTemp }
 
 // Priority order: active faults override the mode/power text.
 private fun statusLine(gen: GeneratorStatus?, connected: Boolean): Pair<String, Color> = when {
@@ -69,7 +69,7 @@ private fun statusLine(gen: GeneratorStatus?, connected: Boolean): Pair<String, 
     tempFault(gen) -> "חום מנוע" to AlarmRed
     gen.disabled -> "גנרטור מושבת" to AlarmGray
     gen.maintenance -> "טיפול" to AlarmOrange
-    gen.manual -> "גנרטור פועל ידני" to AlarmOrange
+    gen.manual -> "גנרטור פועל ידני" to AlarmRed
     gen.automatic && gen.mains -> "מתח רשת" to AlarmGreen
     gen.automatic && !gen.mains -> "מתח גנרטור" to AlarmGreen
     else -> "לא ידוע" to AlarmGray
@@ -121,7 +121,7 @@ private data class SwitchPosition(val label: String, val angle: Float, val color
 private val SWITCH_POSITIONS = listOf(
     SwitchPosition("מנוטרל", -67.5f, AlarmGray),
     SwitchPosition("אוטו", -22.5f, AlarmGreen),
-    SwitchPosition("ידני", 22.5f, AlarmOrange),
+    SwitchPosition("ידני", 22.5f, AlarmRed),
     SwitchPosition("טיפול", 67.5f, AlarmOrange),
 )
 
@@ -178,9 +178,9 @@ private fun ModeCard(gen: GeneratorStatus?) {
 }
 
 // Illuminated-lens colors per mode. Automatic stays lit solid green;
-// every other mode blinks in its own color (manual/disabled = red, maintenance = blue).
+// disabled is solid gray; every other mode blinks in its own color (manual = red, maintenance = blue).
 private fun lensColorFor(activeIndex: Int): Pair<Color, Boolean> = when (activeIndex) {
-    0 -> AlarmRed to true                 // disabled — red, blinking
+    0 -> AlarmGray to false                // disabled — gray, solid
     1 -> AlarmGreen to false              // automatic — green, solid
     2 -> AlarmRed to true                 // manual — red, blinking
     3 -> Color(0xFF2979FF) to true        // maintenance — blue, blinking
