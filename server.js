@@ -132,8 +132,8 @@ client.on('close', () => {
 });
 
 // ─── Generator status coils: M355-M363 (raw mirrors in PLC) + M352 (fault) ────
-// M355=חום_מנוע M356=לחץ_שמן M357=סטרטר M358=דימום M359=מתח_רשת
-// M360=מצב_טיפול M361=מצב_אוטו M362=מצב_מושבת M363=מצב_ידני
+// M355=לחץ_שמן M356=חום_מנוע M357=סטרטר M358=דימום M359=מתח_רשת
+// M360=מצב_מושבט M361=מצב_ידני M362=מצב_טיפול M363=מצב_אוטו
 const GENERATOR_COIL_BASE = 355;
 
 // ─── Status cache & polling ───────────────────────────────────────────────────
@@ -170,8 +170,8 @@ async function readStatus() {
   const generatorBlock = await client.readCoils(GENERATOR_COIL_BASE, 9);
   const generatorFault = await client.readCoils(352, 1);
   const [
-    engineTemp, oilPressure, , , mains,
-    maintenance, automatic, disabled, manual,
+    oilPressure, engineTemp, , , mains,
+    disabled, manual, maintenance, automatic,
   ] = generatorBlock.data;
   const generator = {
     disabled,

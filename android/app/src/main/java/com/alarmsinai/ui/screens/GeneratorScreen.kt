@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.sp
 import com.alarmsinai.data.model.GeneratorStatus
 import com.alarmsinai.ui.theme.AlarmGray
 import com.alarmsinai.ui.theme.AlarmGreen
-import com.alarmsinai.ui.theme.AlarmOrange
 import com.alarmsinai.ui.theme.AlarmRed
 import com.alarmsinai.viewmodel.AlarmViewModel
 import kotlin.math.cos
@@ -59,7 +58,9 @@ fun GeneratorScreen(vm: AlarmViewModel) {
     }
 }
 
-private val oilFault: (GeneratorStatus?) -> Boolean = { it != null && !it.oilPressure }
+private val AlarmMaintenanceBlue = Color(0xFF2979FF)
+
+private val oilFault: (GeneratorStatus?) -> Boolean = { it != null && it.oilPressure }
 private val tempFault: (GeneratorStatus?) -> Boolean = { it != null && it.engineTemp }
 
 // Priority order: active faults override the mode/power text.
@@ -67,8 +68,8 @@ private fun statusLine(gen: GeneratorStatus?, connected: Boolean): Pair<String, 
     !connected || gen == null -> "מתחבר..." to AlarmGray
     oilFault(gen) -> "לחץ שמן נמוך" to AlarmRed
     tempFault(gen) -> "חום מנוע" to AlarmRed
-    gen.disabled -> "גנרטור מושבת" to AlarmGray
-    gen.maintenance -> "טיפול" to AlarmOrange
+    gen.disabled -> "מושבט" to AlarmGray
+    gen.maintenance -> "טיפול" to AlarmMaintenanceBlue
     gen.manual -> "גנרטור פועל ידני" to AlarmRed
     gen.automatic && gen.mains -> "מתח רשת" to AlarmGreen
     gen.automatic && !gen.mains -> "מתח גנרטור" to AlarmGreen
@@ -122,7 +123,7 @@ private val SWITCH_POSITIONS = listOf(
     SwitchPosition("מנוטרל", 67.5f, AlarmGray),
     SwitchPosition("אוטו", -22.5f, AlarmGreen),
     SwitchPosition("ידני", 22.5f, AlarmRed),
-    SwitchPosition("טיפול", -67.5f, AlarmOrange),
+    SwitchPosition("טיפול", -67.5f, AlarmMaintenanceBlue),
 )
 
 @Composable
@@ -187,7 +188,7 @@ private fun lensColorFor(activeIndex: Int): Pair<Color, Boolean> = when (activeI
     0 -> AlarmGray to false                // disabled — gray, solid
     1 -> AlarmGreen to false              // automatic — green, solid
     2 -> AlarmRed to true                 // manual — red, blinking
-    3 -> Color(0xFF2979FF) to true        // maintenance — blue, blinking
+    3 -> AlarmMaintenanceBlue to true     // maintenance — blue, blinking
     else -> Color.Gray to false
 }
 
