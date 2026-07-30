@@ -9,6 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -114,13 +116,24 @@ private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
                 }
                 // Engine hour-meter: whole hours before the point, tenths of an
                 // hour (6-minute ticks) after it — pinned to the top-left corner.
-                Text(
-                    "${gen?.engineHoursWhole ?: 0}.${gen?.engineHoursTenths ?: 0}",
+                Row(
                     modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.HourglassEmpty,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        "${gen?.engineHoursWhole ?: 0}.${gen?.engineHoursTenths ?: 0}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }
