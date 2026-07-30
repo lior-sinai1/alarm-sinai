@@ -22,7 +22,9 @@ data class GeneratorStatus(
     val mains: Boolean = false,
     val oilPressure: Boolean = false,
     val engineTemp: Boolean = false,
-    val fault: Boolean = false
+    val fault: Boolean = false,
+    val engineHoursWhole: Int = 0,
+    val engineHoursTenths: Int = 0
 )
 
 data class ArmRequest(@SerializedName("zone") val zone: Int)

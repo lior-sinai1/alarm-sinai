@@ -145,6 +145,9 @@ async function readStatus() {
   const armed    = await client.readCoils(175, 1);
   const alarm    = await client.readCoils(19, 1);
   const timerReg = await client.readHoldingRegisters(1, 2);
+  // Engine hour-meter: %C0 (0-9, resets every 6 min) mirrored to MW3,
+  // pulses %C1 (full hours) mirrored to MW4
+  const hourMeterReg = await client.readHoldingRegisters(3, 2);
   // Real-time sensor state: M183 (entry door) and M301-M322
   const entryDoor   = await client.readCoils(183, 1);
   const sensorBlock = await client.readCoils(301, 22);
@@ -182,6 +185,8 @@ async function readStatus() {
     oilPressure,
     engineTemp,
     fault: !!generatorFault.data[0],
+    engineHoursTenths: hourMeterReg.data[0],
+    engineHoursWhole:  hourMeterReg.data[1],
   };
 
   return {

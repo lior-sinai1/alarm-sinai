@@ -88,27 +88,38 @@ private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
         // Forced LTR so the icon column always pins to the literal left edge,
         // regardless of the app's RTL (Hebrew) layout direction.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OilPressureIcon(
-                        tint = if (oilFault(gen)) AlarmRed else Color.Gray,
-                        modifier = Modifier.size(26.dp)
-                    )
-                    EngineTempIcon(
-                        tint = if (tempFault(gen)) AlarmRed else Color.Gray,
-                        modifier = Modifier.size(26.dp)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OilPressureIcon(
+                            tint = if (oilFault(gen)) AlarmRed else Color.Gray,
+                            modifier = Modifier.size(26.dp)
+                        )
+                        EngineTempIcon(
+                            tint = if (tempFault(gen)) AlarmRed else Color.Gray,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    Text(
+                        statusText,
+                        modifier = Modifier.weight(1f).padding(start = 16.dp),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
+                        textAlign = TextAlign.Center
                     )
                 }
+                // Engine hour-meter: whole hours before the point, tenths of an
+                // hour (6-minute ticks) after it — pinned to the top-left corner.
                 Text(
-                    statusText,
-                    modifier = Modifier.weight(1f).padding(start = 16.dp),
-                    fontSize = 20.sp,
+                    "${gen?.engineHoursWhole ?: 0}.${gen?.engineHoursTenths ?: 0}",
+                    modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = statusColor,
-                    textAlign = TextAlign.Center
+                    color = Color.White
                 )
             }
         }
