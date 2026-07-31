@@ -66,21 +66,37 @@ private val oilFault: (GeneratorStatus?) -> Boolean = { it != null && it.oilPres
 private val tempFault: (GeneratorStatus?) -> Boolean = { it != null && it.engineTemp }
 
 // Priority order: active faults override the mode/power text.
-private fun statusLine(gen: GeneratorStatus?, connected: Boolean): Pair<String, Color> = when {
-    !connected || gen == null -> "מתחבר..." to AlarmGray
-    oilFault(gen) -> "לחץ שמן נמוך" to AlarmRed
-    tempFault(gen) -> "חום מנוע" to AlarmRed
-    gen.disabled -> "מושבט" to AlarmGray
-    gen.maintenance -> "טיפול" to AlarmMaintenanceBlue
-    gen.manual -> "גנרטור פועל ידני" to AlarmRed
-    gen.automatic && gen.mains -> "מתח רשת" to AlarmGreen
-    gen.automatic && !gen.mains -> "מתח גנרטור" to AlarmGreen
-    else -> "לא ידוע" to AlarmGray
+// Returns (top line, bottom line or null, color).
+private fun statusLines(gen: GeneratorStatus?, connected: Boolean): Triple<String, String?, Color> = when {
+    !connected || gen == null -> Triple("מתחבר...", null, AlarmGray)
+    oilFault(gen) -> Triple("לחץ שמן נמוך", null, AlarmRed)
+    tempFault(gen) -> Triple("חום מנוע", null, AlarmRed)
+    gen.disabled -> Triple("מושבט", null, AlarmGray)
+    gen.maintenance -> Triple("טיפול", null, AlarmMaintenanceBlue)
+    gen.manual && gen.manualRunning -> Triple("מערכת פועלת במצב ידני", null, AlarmRed)
+    gen.manual && gen.manualCounter > 0 -> Triple("מצב ידני", "${gen.manualCounter}", AlarmRed)
+    gen.manual -> Triple("מצב ידני", null, AlarmRed)
+    gen.automatic && gen.mains -> Triple("מתח רשת", "מערכת בהמתנה", AlarmGreen)
+    gen.automatic && !gen.mains -> Triple("רשת מנותקת", "גנרטור חירום", AlarmRed)
+    else -> Triple("לא ידוע", null, AlarmGray)
 }
+
+// Engine hours only accrue while the generator is actually producing power —
+// running on the grid (mains) does not turn the engine.
+private fun engineRunning(gen: GeneratorStatus?): Boolean =
+    gen != null && ((gen.automatic && !gen.mains) || (gen.manual && gen.manualRunning))
 
 @Composable
 private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
-    val (statusText, statusColor) = statusLine(gen, connected)
+    val (statusText, statusText2, statusColor) = statusLines(gen, connected)
+    val running = engineRunning(gen)
+    val infinite = rememberInfiniteTransition(label = "hourglassBlink")
+    val hourglassAlpha by infinite.animateFloat(
+        initialValue = 1f,
+        targetValue = if (running) 0.15f else 1f,
+        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+        label = "hourglassAlpha"
+    )
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -106,14 +122,27 @@ private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
                             modifier = Modifier.size(26.dp)
                         )
                     }
-                    Text(
-                        statusText,
+                    Column(
                         modifier = Modifier.weight(1f).padding(start = 16.dp),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = statusColor,
-                        textAlign = TextAlign.Center
-                    )
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            statusText,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor,
+                            textAlign = TextAlign.Center
+                        )
+                        if (statusText2 != null) {
+                            Text(
+                                statusText2,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = statusColor,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
                 // Engine hour-meter: whole hours before the point, tenths of an
                 // hour (6-minute ticks) after it — pinned to the top-left corner.
@@ -126,7 +155,7 @@ private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
                         Icons.Filled.HourglassEmpty,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(16.dp).graphicsLayer { alpha = hourglassAlpha }
                     )
                     Text(
                         "${gen?.engineHoursWhole ?: 0}.${gen?.engineHoursTenths ?: 0}",

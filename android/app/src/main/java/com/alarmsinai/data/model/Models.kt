@@ -23,6 +23,8 @@ data class GeneratorStatus(
     val oilPressure: Boolean = false,
     val engineTemp: Boolean = false,
     val fault: Boolean = false,
+    val manualRunning: Boolean = false,
+    val manualCounter: Int = 0,
     val engineHoursWhole: Int = 0,
     val engineHoursTenths: Int = 0
 )

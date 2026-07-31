@@ -134,7 +134,10 @@ client.on('close', () => {
 // ─── Generator status coils: M355-M363 (raw mirrors in PLC) + M352 (fault) ────
 // M355=לחץ_שמן M356=חום_מנוע M357=סטרטר M358=דימום M359=מתח_רשת
 // M360=מצב_מושבט M361=מצב_ידני M362=מצב_טיפול M363=מצב_אוטו
+// M369=מערכת_פועלת_במצב_ידני, MW6=מונה ספירה במצב ידני
 const GENERATOR_COIL_BASE = 355;
+const MANUAL_RUNNING_COIL = 369;
+const MANUAL_COUNTER_REG  = 6;
 
 // ─── Status cache & polling ───────────────────────────────────────────────────
 let cachedStatus = { ok: false, connected: false, m175: 0, m19: 0, mw1: 0, sensors: {}, bypasses: {}, generator: {} };
@@ -172,6 +175,9 @@ async function readStatus() {
   // Generator mode/status coils M355-M363, plus fault coil M352
   const generatorBlock = await client.readCoils(GENERATOR_COIL_BASE, 9);
   const generatorFault = await client.readCoils(352, 1);
+  // M369 = system running in manual mode; MW6 = manual-mode counter
+  const manualRunningCoil = await client.readCoils(MANUAL_RUNNING_COIL, 1);
+  const manualCounterReg  = await client.readHoldingRegisters(MANUAL_COUNTER_REG, 1);
   const [
     oilPressure, engineTemp, , , mains,
     disabled, manual, maintenance, automatic,
@@ -185,6 +191,8 @@ async function readStatus() {
     oilPressure,
     engineTemp,
     fault: !!generatorFault.data[0],
+    manualRunning: !!manualRunningCoil.data[0],
+    manualCounter: manualCounterReg.data[0],
     engineHoursTenths: hourMeterReg.data[0],
     engineHoursWhole:  hourMeterReg.data[1],
   };
