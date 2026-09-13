@@ -1,0 +1,24 @@
+{
+  "tuya": {
+    "deviceId": "REPLACE_WITH_DEVICE_ID",
+    "localKey": "REPLACE_WITH_LOCAL_KEY",
+    "ip": "",
+    "version": "3.3",
+    "motionDpId": "1",
+    "illuminanceDpId": "101",
+    "illuminanceScale": 1,
+    "temperatureDpId": "102",
+    "temperatureScale": 0.1,
+    "humidityDpId": "103",
+    "humidityScale": 1
+  },
+  "fibaro": {
+    "host": "192.168.1.X",
+    "username": "REPLACE_WITH_FIBARO_USER",
+    "password": "REPLACE_WITH_FIBARO_PASSWORD",
+    "globalVariableName": "TuyaMotion",
+    "illuminanceVariableName": "TuyaLux",
+    "temperatureVariableName": "TuyaTemp",
+    "humidityVariableName": "TuyaHumidity"
+  }
+}

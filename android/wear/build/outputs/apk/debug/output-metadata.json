@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "com.alarmsinai",
+  "variantName": "debug",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 2,
+      "versionName": "1.5.0",
+      "outputFile": "wear-debug.apk"
+    }
+  ],
+  "elementType": "File",
+  "minSdkVersionForDexing": 30
+}

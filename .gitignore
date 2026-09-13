@@ -4,6 +4,7 @@ firebase-service-account.json
 
 # Android
 # android/app/google-services.json  # committed as template — override with real file
+android/local.properties
 android/.gradle/
 android/build/
 android/app/build/
