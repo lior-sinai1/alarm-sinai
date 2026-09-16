@@ -7,16 +7,17 @@ const CONFIG_PATH = path.join(__dirname, "..", "config.json");
 
 export interface HubConfig {
   tuya: {
+    clientId: string;
+    clientSecret: string;
     deviceId: string;
-    localKey: string;
-    ip?: string;
-    version: string;
-    motionDpId: string;
-    illuminanceDpId?: string;
-    illuminanceScale?: number;
-    temperatureDpId?: string;
+    baseUrl: string;
+    pollIntervalMs?: number;
+    motionCode: string;
+    temperatureCode?: string;
     temperatureScale?: number;
-    humidityDpId?: string;
+    illuminanceCode?: string;
+    illuminanceScale?: number;
+    humidityCode?: string;
     humidityScale?: number;
   };
   fibaro: {
@@ -37,15 +38,18 @@ export function loadConfig(): HubConfig {
   } catch {
     throw new Error(
       `Missing config.json in hub/. Copy config.example.json to config.json and fill in your ` +
-        `Tuya device credentials and Fibaro Home Center details.`,
+        `Tuya Cloud credentials and Fibaro Home Center details.`,
     );
   }
 
   const config = JSON.parse(raw) as HubConfig;
 
   const required = [
+    ["tuya.clientId", config.tuya?.clientId],
+    ["tuya.clientSecret", config.tuya?.clientSecret],
     ["tuya.deviceId", config.tuya?.deviceId],
-    ["tuya.localKey", config.tuya?.localKey],
+    ["tuya.baseUrl", config.tuya?.baseUrl],
+    ["tuya.motionCode", config.tuya?.motionCode],
     ["fibaro.host", config.fibaro?.host],
     ["fibaro.username", config.fibaro?.username],
     ["fibaro.password", config.fibaro?.password],
@@ -57,22 +61,20 @@ export function loadConfig(): HubConfig {
     throw new Error(`config.json is missing required field(s): ${missing.join(", ")}`);
   }
 
-  // Optional channels (illuminance/temperature/humidity) need both sides of the pairing:
-  // a Tuya DP id to read from and a Fibaro variable name to write to.
   const optionalPairs = [
-    ["illuminanceDpId", "illuminanceVariableName"],
-    ["temperatureDpId", "temperatureVariableName"],
-    ["humidityDpId", "humidityVariableName"],
+    ["illuminanceCode", "illuminanceVariableName"],
+    ["temperatureCode", "temperatureVariableName"],
+    ["humidityCode", "humidityVariableName"],
   ] as const;
 
-  for (const [dpKey, varKey] of optionalPairs) {
-    const dpId = config.tuya[dpKey];
+  for (const [codeKey, varKey] of optionalPairs) {
+    const code = config.tuya[codeKey];
     const varName = config.fibaro[varKey];
-    if (dpId && !varName) {
-      throw new Error(`config.json: tuya.${dpKey} is set but fibaro.${varKey} is missing`);
+    if (code && !varName) {
+      throw new Error(`config.json: tuya.${codeKey} is set but fibaro.${varKey} is missing`);
     }
-    if (varName && !dpId) {
-      throw new Error(`config.json: fibaro.${varKey} is set but tuya.${dpKey} is missing`);
+    if (varName && !code) {
+      throw new Error(`config.json: fibaro.${varKey} is set but tuya.${codeKey} is missing`);
     }
   }
 
