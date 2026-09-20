@@ -81,19 +81,20 @@ private fun statusLines(gen: GeneratorStatus?, connected: Boolean): Triple<Strin
     else -> Triple("לא ידוע", null, AlarmGray)
 }
 
-// Engine hours only accrue while the generator is actually producing power —
-// running on the grid (mains) does not turn the engine.
-private fun engineRunning(gen: GeneratorStatus?): Boolean =
-    gen != null && ((gen.automatic && !gen.mains) || (gen.manual && gen.manualRunning))
+// The hour-meter icon blinks only while the PLC is really counting engine hours.
+// That is the run gate of the meter's timer (M351), read straight from the PLC —
+// not inferred from mode/mains, which misses the pre-start delay and the
+// conditions the PLC program itself applies.
+private fun hourMeterCounting(gen: GeneratorStatus?): Boolean = gen?.engineCounting == true
 
 @Composable
 private fun TopStatusCard(gen: GeneratorStatus?, connected: Boolean) {
     val (statusText, statusText2, statusColor) = statusLines(gen, connected)
-    val running = engineRunning(gen)
+    val counting = hourMeterCounting(gen)
     val infinite = rememberInfiniteTransition(label = "hourglassBlink")
     val hourglassAlpha by infinite.animateFloat(
         initialValue = 1f,
-        targetValue = if (running) 0.15f else 1f,
+        targetValue = if (counting) 0.15f else 1f,
         animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
         label = "hourglassAlpha"
     )

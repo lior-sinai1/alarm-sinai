@@ -159,6 +159,10 @@ client.on('close', () => {
 // M355=לחץ_שמן M356=חום_מנוע M357=סטרטר M358=דימום M359=מתח_רשת
 // M360=מצב_מושבט M361=מצב_ידני M362=מצב_טיפול M363=מצב_אוטו
 // M369=מערכת_פועלת_במצב_ידני, MW6=מונה ספירה במצב ידני
+// M351 = run gate of the engine hour-meter timer %TM12: the meter only counts while
+// it is on (%Q0.3 and not maintenance mode, after the %TM7 pre-start delay).
+// M352 (fault) sits right after it, so both are read as one 2-coil block.
+const ENGINE_COUNTING_COIL = 351;
 const GENERATOR_COIL_BASE = 355;
 const MANUAL_RUNNING_COIL = 369;
 const MANUAL_COUNTER_REG  = 6;
@@ -196,9 +200,10 @@ async function readStatus() {
     bypasses[sensorAddr] = bypassBlock.data[bypassCoil - 50] ? 1 : 0;
   }
 
-  // Generator mode/status coils M355-M363, plus fault coil M352
+  // Generator mode/status coils M355-M363, plus M351 (hour-meter run gate) and
+  // M352 (fault), which are adjacent and read in a single request
   const generatorBlock = await client.readCoils(GENERATOR_COIL_BASE, 9);
-  const generatorFault = await client.readCoils(352, 1);
+  const engineBlock = await client.readCoils(ENGINE_COUNTING_COIL, 2);
   // M369 = system running in manual mode; MW6 = manual-mode counter
   const manualRunningCoil = await client.readCoils(MANUAL_RUNNING_COIL, 1);
   const manualCounterReg  = await client.readHoldingRegisters(MANUAL_COUNTER_REG, 1);
@@ -214,7 +219,8 @@ async function readStatus() {
     mains,
     oilPressure,
     engineTemp,
-    fault: !!generatorFault.data[0],
+    fault: !!engineBlock.data[1],
+    engineCounting: !!engineBlock.data[0],
     manualRunning: !!manualRunningCoil.data[0],
     manualCounter: manualCounterReg.data[0],
     engineHoursTenths: hourMeterReg.data[0],

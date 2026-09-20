@@ -1,0 +1,95 @@
+# Generator entities read straight from the M221 PLC over Modbus TCP.
+#
+# This is a FRAGMENT, not a standalone file. Paste the two lists below under the
+# hub you already use for the alarm PLC in configuration.yaml, at hub level:
+#
+#   modbus:
+#     - name: <your existing hub>
+#       type: tcp
+#       host: 192.168.1.50
+#       port: 502
+#       binary_sensors:      # <- paste from here
+#         ...
+#       sensors:
+#         ...
+#
+# Do not add a second hub for the same PLC, and do not move `modbus:` into a
+# package file: Home Assistant cannot merge it with the one in configuration.yaml.
+#
+# Addresses are the raw PLC numbers, exactly as server.js uses them:
+# %M355 -> address 355, %MW3 -> address 3. Slave id defaults to 1 (PLC_ID in server.js).
+# Read-only: the generator selector switch is physical, nothing here writes to the PLC.
+#
+# Coil map (from server.js):
+#   M352 fault   M355 oil pressure   M356 engine temp   M357 starter   M358 bleed (דימום)
+#   M359 mains   M360 disabled   M361 manual   M362 maintenance   M363 automatic
+#   M369 running in manual mode   MW3/MW4 hour meter   MW6 manual-mode counter
+
+binary_sensors:
+  - name: Generator Fault
+    unique_id: generator_fault
+    address: 352
+    device_class: problem
+    scan_interval: 5
+  - name: Generator Oil Pressure Low
+    unique_id: generator_oil_pressure_low
+    address: 355
+    device_class: problem
+    scan_interval: 5
+  - name: Generator Engine Temperature High
+    unique_id: generator_engine_temperature_high
+    address: 356
+    device_class: problem
+    scan_interval: 5
+  # Starter and bleed are mirrored in the PLC but the Android app does not use them.
+  - name: Generator Starter
+    unique_id: generator_starter
+    address: 357
+    scan_interval: 5
+  - name: Generator Bleed
+    unique_id: generator_bleed
+    address: 358
+    scan_interval: 5
+  # True = mains voltage present.
+  - name: Generator Mains Power
+    unique_id: generator_mains_power
+    address: 359
+    device_class: power
+    scan_interval: 5
+  - name: Generator Mode Disabled
+    unique_id: generator_mode_disabled
+    address: 360
+    scan_interval: 5
+  - name: Generator Mode Manual
+    unique_id: generator_mode_manual
+    address: 361
+    scan_interval: 5
+  - name: Generator Mode Maintenance
+    unique_id: generator_mode_maintenance
+    address: 362
+    scan_interval: 5
+  - name: Generator Mode Automatic
+    unique_id: generator_mode_automatic
+    address: 363
+    scan_interval: 5
+  - name: Generator Manual Running
+    unique_id: generator_manual_running
+    address: 369
+    scan_interval: 5
+
+sensors:
+  # MW3 = tenths of an hour (0-9), MW4 = whole hours. Read as ONE uint32 request
+  # (MW3 is the high word) so the two words can never be sampled on opposite sides
+  # of a rollover. raw = MW3 * 65536 + MW4; generator_template.yaml decodes it.
+  - name: Generator Hour Meter Raw
+    unique_id: generator_hour_meter_raw
+    address: 3
+    input_type: holding
+    data_type: uint32
+    scan_interval: 10
+  - name: Generator Manual Counter
+    unique_id: generator_manual_counter
+    address: 6
+    input_type: holding
+    data_type: uint16
+    scan_interval: 10

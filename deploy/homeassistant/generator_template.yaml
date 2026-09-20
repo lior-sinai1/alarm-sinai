@@ -1,0 +1,91 @@
+# Derived generator entities, built from the Modbus entities in generator_modbus.yaml.
+# The logic mirrors GeneratorScreen.kt in the Android app.
+#
+# Use it as a package (works with any hub name):
+#
+#   # configuration.yaml
+#   homeassistant:
+#     packages:
+#       generator: !include deploy/homeassistant/generator_template.yaml
+#
+# or paste the `template:` list into your own template section.
+
+template:
+  - binary_sensor:
+      # Engine only turns when it produces power: automatic mode with no mains,
+      # or manual mode with the "running" coil set. Running on the grid does not count.
+      - name: Generator Engine Running
+        unique_id: generator_engine_running
+        device_class: running
+        availability: "{{ has_value('binary_sensor.generator_mode_automatic') }}"
+        state: >-
+          {{ (is_state('binary_sensor.generator_mode_automatic', 'on')
+              and is_state('binary_sensor.generator_mains_power', 'off'))
+             or (is_state('binary_sensor.generator_mode_manual', 'on')
+                 and is_state('binary_sensor.generator_manual_running', 'on')) }}
+
+  - sensor:
+      # Position of the 4-way selector switch. Same precedence as the app's knob.
+      - name: Generator Mode
+        unique_id: generator_mode
+        availability: "{{ has_value('binary_sensor.generator_mode_disabled') }}"
+        state: >-
+          {%- if is_state('binary_sensor.generator_mode_disabled', 'on') -%}disabled
+          {%- elif is_state('binary_sensor.generator_mode_automatic', 'on') -%}automatic
+          {%- elif is_state('binary_sensor.generator_mode_manual', 'on') -%}manual
+          {%- elif is_state('binary_sensor.generator_mode_maintenance', 'on') -%}maintenance
+          {%- else -%}none{%- endif -%}
+
+      # The same headline text the app shows, in the same priority order
+      # (statusLines in GeneratorScreen.kt): faults override the mode.
+      # It reads the mode coils directly, not sensor.generator_mode.
+      # `detail` is the app's second line.
+      # (The app spells the disabled state "מושבט"; this uses "מושבת".)
+      - name: Generator Status
+        unique_id: generator_status
+        availability: "{{ has_value('binary_sensor.generator_mode_disabled') }}"
+        state: >-
+          {%- set disabled = is_state('binary_sensor.generator_mode_disabled', 'on') -%}
+          {%- set maintenance = is_state('binary_sensor.generator_mode_maintenance', 'on') -%}
+          {%- set manual = is_state('binary_sensor.generator_mode_manual', 'on') -%}
+          {%- set automatic = is_state('binary_sensor.generator_mode_automatic', 'on') -%}
+          {%- set mains = is_state('binary_sensor.generator_mains_power', 'on') -%}
+          {%- set running = is_state('binary_sensor.generator_manual_running', 'on') -%}
+          {%- if is_state('binary_sensor.generator_oil_pressure_low', 'on') -%}לחץ שמן נמוך
+          {%- elif is_state('binary_sensor.generator_engine_temperature_high', 'on') -%}חום מנוע
+          {%- elif disabled -%}מושבת
+          {%- elif maintenance -%}טיפול
+          {%- elif manual and running -%}מערכת פועלת במצב ידני
+          {%- elif manual -%}מצב ידני
+          {%- elif automatic and mains -%}מתח רשת
+          {%- elif automatic -%}רשת מנותקת
+          {%- else -%}לא ידוע{%- endif -%}
+        attributes:
+          detail: >-
+            {%- set disabled = is_state('binary_sensor.generator_mode_disabled', 'on') -%}
+            {%- set maintenance = is_state('binary_sensor.generator_mode_maintenance', 'on') -%}
+            {%- set manual = is_state('binary_sensor.generator_mode_manual', 'on') -%}
+            {%- set automatic = is_state('binary_sensor.generator_mode_automatic', 'on') -%}
+            {%- set mains = is_state('binary_sensor.generator_mains_power', 'on') -%}
+            {%- set running = is_state('binary_sensor.generator_manual_running', 'on') -%}
+            {%- set counter = states('sensor.generator_manual_counter') | int(0) -%}
+            {%- if is_state('binary_sensor.generator_oil_pressure_low', 'on')
+                   or is_state('binary_sensor.generator_engine_temperature_high', 'on')
+                   or disabled or maintenance -%}
+            {%- elif manual and running -%}
+            {%- elif manual -%}{{ counter if counter > 0 else '' }}
+            {%- elif automatic and mains -%}מערכת בהמתנה
+            {%- elif automatic -%}גנרטור חירום
+            {%- endif -%}
+
+      # Decodes generator_hour_meter_raw (MW3 * 65536 + MW4): whole hours plus
+      # tenths of an hour. Matches the "123.4" counter in the app.
+      - name: Generator Engine Hours
+        unique_id: generator_engine_hours
+        unit_of_measurement: h
+        device_class: duration
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.generator_hour_meter_raw') }}"
+        state: >-
+          {%- set raw = states('sensor.generator_hour_meter_raw') | int(0) -%}
+          {{ ((raw % 65536) + (raw // 65536) / 10) | round(1) }}

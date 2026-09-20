@@ -151,6 +151,24 @@ APK ישן פונה לשורש הדומיין (שם יושב Home Assistant) ו�
 
 ---
 
+## שלב 8 — הוסף את הגנרטור ל-Home Assistant
+
+HA כבר מדבר עם ה-PLC ישירות, אז הגנרטור נקרא ממנו בלי לעבור דרך שרת האזעקה (ולכן גם בלי `X-API-Key`). הקבצים ב-`deploy/homeassistant/`:
+
+1. **`generator_modbus.yaml`** — הדבק את שתי הרשימות (`binary_sensors`, `sensors`) מתחת ל-hub הקיים שלך ב-`configuration.yaml`. אל תוסיף hub שני לאותו PLC, ואל תשים `modbus:` בקובץ package (HA לא ממזג אותו).
+2. **`generator_template.yaml`** — חבר כ-package:
+   ```yaml
+   homeassistant:
+     packages:
+       generator: !include deploy/homeassistant/generator_template.yaml
+   ```
+3. בדוק את ההגדרות (**Developer tools → YAML → Check configuration**) והפעל מחדש את HA.
+
+ייווצרו הישויות `sensor.generator_status` (אותו טקסט כמו באפליקציה), `sensor.generator_mode`, `sensor.generator_engine_hours`, `binary_sensor.generator_engine_running` ועוד 11 חיישני coil גולמיים.
+**אימות:** השווה את `sensor.generator_engine_hours` למונה שעות המנוע באפליקציה (למשל `123.4`). אם הם שונים, סדר המילים של ה-`uint32` הפוך, ויש להוסיף `swap: word` ל-`Generator Hour Meter Raw`.
+
+---
+
 ## בדיקה מהירה
 
 ```bash
