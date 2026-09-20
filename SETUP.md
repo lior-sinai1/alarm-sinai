@@ -105,17 +105,27 @@ adb install app-debug.apk
 
 ```
 ngrok (demystify-unplug-sassy.ngrok-free.dev)
-  └─► nginx 127.0.0.1:8080
+  └─► nginx 127.0.0.1:8081
         ├─ /alarm/*   ─► שרת האזעקה  127.0.0.1:3000  (הקידומת /alarm נחתכת)
         └─ כל השאר    ─► Home Assistant 127.0.0.1:8123
 ```
 
-**1. התקן והפעל את Nginx:**
+הפורט הוא **8081** בכוונה: בשרת הבית כבר יש בלוקים אחרים ב-Nginx על 8080 (`default_server` שמעביר ל-`127.0.0.1:80`, שם אין כלום, ולכן החזיר 502) ועל 8090. הקובץ החדש לא נוגע בהם.
+
+**1. התקן את הקונפיגורציה** (Nginx כבר מותקן בשרת):
 ```bash
-sudo apt install nginx
+# ודא שפורט 8081 פנוי (אם יש פלט, בחר פורט אחר בקובץ ובפקודות למטה)
+ss -ltn | grep -w 8081
+
 sudo cp deploy/nginx/alarm-sinai.conf /etc/nginx/conf.d/alarm-sinai.conf
 sudo nginx -t && sudo systemctl reload nginx
 ```
+בדוק **לפני** שנוגעים ב-ngrok:
+```bash
+curl -s  http://127.0.0.1:8081/alarm/health          # {"ok":true,"connected":true}
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8081/   # 200 = Home Assistant
+```
+אם `/` מחזיר 400, HA דוחה את ה-proxy: ראה שלב 2. אם מחזיר 502, ראה `sudo tail /var/log/nginx/error.log`.
 
 **2. Home Assistant** — ב-`configuration.yaml` (Nginx מתחבר מ-loopback):
 ```yaml
@@ -127,25 +137,29 @@ http:
 ```
 אם HA רץ ב-Docker בלי `network_mode: host`, הבקשות מגיעות מכתובת ה-gateway של Docker (למשל `172.17.0.1`) ולא מ-`127.0.0.1`. הוסף אותה ל-`trusted_proxies`.
 
-**3. ngrok** — הפנה את הדומיין ל-Nginx (לא ל-8123 ולא ל-3000):
+**3. ngrok** — מנהרה **אחת** לדומיין, שמפנה ל-Nginx (לא ל-8123 ולא ל-3000). הדומיין נשאר אחד, ו-Nginx מחלק לפי נתיב:
 ```bash
-ngrok http --url=demystify-unplug-sassy.ngrok-free.dev 8080
+# איך ngrok רץ כרגע, ולאן הוא מפנה:
+ps -o args= -C ngrok
+curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"addr":"[^"]*"'    # לפני השינוי: http://127.0.0.1:8123
+
+ngrok http --url=demystify-unplug-sassy.ngrok-free.dev 127.0.0.1:8081
 ```
+אם ngrok רץ כשירות או מקובץ הגדרות, שנה שם את כתובת היעד ל-`127.0.0.1:8081` והפעל מחדש את השירות. אחרי השינוי הפקודה השנייה צריכה להציג `http://127.0.0.1:8081`.
 
-**4. בדיקה:**
+**4. בדיקה דרך ngrok:**
 ```bash
-curl http://127.0.0.1:8080/alarm/health                              # {"ok":true,...}
-curl -I http://127.0.0.1:8080/                                       # Home Assistant
-curl https://demystify-unplug-sassy.ngrok-free.dev/alarm/health      # דרך ngrok (פתוח, בלי מפתח)
+curl https://demystify-unplug-sassy.ngrok-free.dev/alarm/health      # {"ok":true,...}
+curl -s -o /dev/null -w '%{http_code}\n' https://demystify-unplug-sassy.ngrok-free.dev/   # Home Assistant
 
-# דורשים מפתח:
+# אחרי שהפעלת את השרת עם ALARM_API_KEY (שלב 4), הנתיבים האלה דורשים מפתח:
 curl -i https://demystify-unplug-sassy.ngrok-free.dev/alarm/status                          # 401
 curl -i -H "X-API-Key: $ALARM_API_KEY" https://demystify-unplug-sassy.ngrok-free.dev/alarm/status   # 200
 ```
 
 **5. האפליקציה** — `DEFAULT_URL` ב-`AlarmRepository.kt` הוא כעת
 `https://demystify-unplug-sassy.ngrok-free.dev/alarm`. אין מסך הגדרות לשינוי הכתובת, לכן צריך לבנות ולהתקין APK חדש (שלב 5).
-APK ישן פונה לשורש הדומיין (שם יושב Home Assistant) ולא שולח מפתח, ולכן יפסיק לעבוד. יש להחליף אותו בכל הטלפונים.
+עד אז, ה-APK הישן (שפונה לשורש הדומיין) ממשיך לעבוד בזכות הבלוק הזמני "Legacy alarm paths" בקובץ ה-Nginx, כל עוד השרת רץ בלי `ALARM_API_KEY`. ברגע שמפעילים את המפתח, APK ישן מקבל 401 ויש להחליף אותו בכל הטלפונים, ואז למחוק את הבלוק הזמני.
 
 אם משהו נוסף קורא לשרת האזעקה (למשל `rest_command` או חיישן REST ב-Home Assistant), הוא חייב לשלוח את הכותרת `X-API-Key` ולפנות ל-`/alarm/...`.
 
