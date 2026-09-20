@@ -2,6 +2,7 @@ package com.alarmsinai.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.alarmsinai.BuildConfig
 import com.alarmsinai.data.model.ArmRequest
 import com.alarmsinai.data.model.HistoryEvent
 import com.alarmsinai.data.model.StatusResponse
@@ -31,6 +32,13 @@ class AlarmRepository(context: Context) {
         val http = OkHttpClient.Builder()
             .connectTimeout(5, TimeUnit.SECONDS)
             .readTimeout(5, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header("X-API-Key", BuildConfig.ALARM_API_KEY)
+                        .build()
+                )
+            }
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.NONE
             })
@@ -79,7 +87,7 @@ class AlarmRepository(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_URL = "https://demystify-unplug-sassy.ngrok-free.dev"
+        const val DEFAULT_URL = "https://demystify-unplug-sassy.ngrok-free.dev/alarm"
         private const val KEY_HISTORY = "history"
         private const val KEY_DISABLED_SENSORS = "disabled_sensors"
     }

@@ -5,8 +5,32 @@ const ModbusRTU = require('modbus-serial');
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+// Every route except /health needs the header  X-API-Key: <ALARM_API_KEY>.
+// Without a valid key configured the HTTP API stays locked (503); Modbus polling
+// and push notifications keep running.
+const API_KEY = process.env.ALARM_API_KEY || '';
+const API_KEY_MIN_LENGTH = 32;
+const apiKeyConfigured = API_KEY.length >= API_KEY_MIN_LENGTH;
+const sha256 = (s) => crypto.createHash('sha256').update(s).digest();
+const apiKeyDigest = sha256(API_KEY);
+
+function requireApiKey(req, res, next) {
+  if (req.path === '/health') return next();
+  if (!apiKeyConfigured)
+    return res.status(503).json({ ok: false, error: 'server auth not configured' });
+  // Compare fixed-length digests so the comparison is constant-time.
+  const supplied = sha256(req.get('x-api-key') || '');
+  if (!crypto.timingSafeEqual(supplied, apiKeyDigest))
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  next();
+}
+
+app.use(requireApiKey);
 app.use(express.json());
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -342,5 +366,7 @@ app.post('/register-token', (req, res) => {
 // ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Alarm server listening on port ${PORT}`);
+  if (!apiKeyConfigured)
+    console.error(`ALARM_API_KEY is missing or shorter than ${API_KEY_MIN_LENGTH} chars — HTTP API is locked (503)`);
   connectModbus().then(startPolling);
 });

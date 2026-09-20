@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
 import kotlinx.coroutines.*
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
@@ -59,8 +60,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("alarm_prefs", Context.MODE_PRIVATE)
         val url = prefs.getString("server_url", DEFAULT_URL) ?: DEFAULT_URL
+        val http = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header("X-API-Key", BuildConfig.ALARM_API_KEY)
+                        .build()
+                )
+            }
+            .build()
         val api = Retrofit.Builder()
             .baseUrl(url.trimEnd('/') + "/")
+            .client(http)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(WearApiService::class.java)

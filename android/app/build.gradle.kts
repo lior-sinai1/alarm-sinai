@@ -14,6 +14,7 @@ android {
         targetSdk       = 34
         versionCode     = 2
         versionName     = "1.5.0"
+        buildConfigField("String", "ALARM_API_KEY", "\"${rootProject.extra["alarmApiKey"]}\"")
     }
 
     buildTypes {

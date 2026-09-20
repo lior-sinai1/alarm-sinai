@@ -13,6 +13,7 @@ android {
         targetSdk       = 34
         versionCode     = 2
         versionName     = "1.5.0"
+        buildConfigField("String", "ALARM_API_KEY", "\"${rootProject.extra["alarmApiKey"]}\"")
     }
 
     buildTypes {
@@ -27,7 +28,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.13" }
 }
 
@@ -39,5 +40,6 @@ dependencies {
     implementation(libs.wear.compose.foundation)
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
     implementation(libs.coroutines.android)
 }
