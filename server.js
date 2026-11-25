@@ -6,6 +6,7 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const cameras = require('./cameras');
 
 const app = express();
 
@@ -168,13 +169,14 @@ const MANUAL_RUNNING_COIL = 369;
 const MANUAL_COUNTER_REG  = 6;
 
 // ─── Status cache & polling ───────────────────────────────────────────────────
-let cachedStatus = { ok: false, connected: false, m175: 0, m19: 0, mw1: 0, sensors: {}, bypasses: {}, generator: {} };
+let cachedStatus = { ok: false, connected: false, m175: 0, m19: 0, m20: 0, mw1: 0, sensors: {}, bypasses: {}, generator: {} };
 let prevM175 = null;
 let prevM19  = null;
 
 async function readStatus() {
   const armed    = await client.readCoils(175, 1);
-  const alarm    = await client.readCoils(19, 1);
+  // M19 = alarm, M20 = camera siren request (set by cameras.js) — adjacent, one read.
+  const alarm    = await client.readCoils(19, 2);
   const timerReg = await client.readHoldingRegisters(1, 2);
   // Engine hour-meter: %C0 (0-9, resets every 6 min) mirrored to MW3,
   // pulses %C1 (full hours) mirrored to MW4
@@ -232,6 +234,7 @@ async function readStatus() {
     connected: true,
     m175: armed.data[0] ? 1 : 0,
     m19:  alarm.data[0] ? 1 : 0,
+    m20:  alarm.data[1] ? 1 : 0,
     mw1:  timerReg.data[0],
     mw2:  timerReg.data[1],
     sensors,
@@ -244,8 +247,10 @@ async function pollOnce() {
   if (!connected) return;
   try {
     const status = await withModbus(() => readStatus());
+    const prev = cachedStatus.connected ? cachedStatus : null;
     await detectChanges(status);
     cachedStatus = status;
+    await cameras.onStatus(status, prev);
   } catch (err) {
     console.error('Poll error:', err.message);
     connected = false;
@@ -260,7 +265,8 @@ function startPolling() {
 
 // ─── Push notifications ───────────────────────────────────────────────────────
 async function detectChanges(status) {
-  if (prevM19 === 0 && status.m19 === 1)
+  // If the cameras just raised the siren, they already sent their own push.
+  if (prevM19 === 0 && status.m19 === 1 && !cameras.recentlyRaisedSiren())
     await sendPush('אזעקה!', 'פריצה — מערכת האזעקה הופעלה!', 'alarm');
 
   if (prevM175 === 0 && status.m175 === 1)
@@ -273,14 +279,15 @@ async function detectChanges(status) {
   prevM19  = status.m19;
 }
 
-async function sendPush(title, body, type) {
+// `extra` = additional string fields for the app (e.g. eventId / cameraId for camera alerts).
+async function sendPush(title, body, type, extra = {}) {
   if (!fcmEnabled || fcmTokens.length === 0) return;
   const invalidTokens = [];
   for (const token of [...fcmTokens]) {
     try {
       await admin.messaging().send({
         token,
-        data: { title, body, type },
+        data: { ...extra, title, body, type },
         android: { priority: 'high' },
       });
     } catch (err) {
@@ -367,6 +374,16 @@ app.post('/register-token', (req, res) => {
     saveTokens(fcmTokens);
   }
   res.json({ ok: true });
+});
+
+// ─── Cameras (/cameras/*) ─────────────────────────────────────────────────────
+cameras.setup(app, {
+  sendPush,
+  getStatus: () => cachedStatus,
+  writeCoil: async (coil, value) => {
+    if (!connected) throw new Error('PLC not connected');
+    await withModbus(() => client.writeCoil(coil, value));
+  },
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
