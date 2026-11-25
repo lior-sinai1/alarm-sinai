@@ -20,6 +20,16 @@ HASSIO_DATA=${HASSIO_DATA:-/usr/share/hassio}
 
 mountpoint -q "$HASSIO_DATA/media/frigate" || die "encrypted disk not mounted on $HASSIO_DATA/media/frigate (systemctl status secure-storage)"
 
+# The Supervisor creates app_configs/<slug> on the add-on's first start; we want the
+# config in place before that, so create it from the installed slug if missing.
+if ! compgen -G "$HASSIO_DATA/app_configs/*_frigate" >/dev/null && [[ -d $HASSIO_DATA/app_configs ]]; then
+  mapfile -t slugs < <(grep -o '"[a-z0-9]*_frigate"' "$HASSIO_DATA/apps.json" 2>/dev/null | tr -d '"' | sort -u)
+  if [[ ${#slugs[@]} -eq 1 ]]; then
+    echo "Creating $HASSIO_DATA/app_configs/${slugs[0]}"
+    mkdir -m 755 "$HASSIO_DATA/app_configs/${slugs[0]}"
+  fi
+fi
+
 shopt -s nullglob
 dirs=("$HASSIO_DATA"/app_configs/*_frigate "$HASSIO_DATA"/addon_configs/*_frigate)
 shopt -u nullglob
