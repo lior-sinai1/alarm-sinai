@@ -48,8 +48,9 @@ const ANALYSIS      = ['smart', 'motion'];
 const RESPONSES     = ['push', 'siren', 'both'];
 const ROTATIONS     = [0, 90, 180, 270];
 // Default RTSP paths for XMEye-based cameras (Gadinan and similar). Editable per camera.
-const DEFAULT_RTSP_MAIN = 'rtsp://{ip}:554/user={user}&password={password}&channel=1&stream=0.sdp?';
-const DEFAULT_RTSP_SUB  = 'rtsp://{ip}:554/user={user}&password={password}&channel=1&stream=1.sdp?';
+// XMEye: credentials both as RTSP userinfo (digest auth, needed by go2rtc) and in the path (older firmware).
+const DEFAULT_RTSP_MAIN = 'rtsp://{user}:{password}@{ip}:554/user={user}&password={password}&channel=1&stream=0.sdp?';
+const DEFAULT_RTSP_SUB  = 'rtsp://{user}:{password}@{ip}:554/user={user}&password={password}&channel=1&stream=1.sdp?';
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 const DEFAULT_SETTINGS = {
