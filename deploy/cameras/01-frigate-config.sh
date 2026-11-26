@@ -46,7 +46,7 @@ read -r -p "Camera username (usually admin): " CAM_USER
 read -r -s -p "Camera password (hidden): " CAM_PASS; echo
 [[ -n $CAM_USER ]] || die "empty username"
 # XMEye puts the credentials inside the URL path; these characters would break it.
-[[ $CAM_USER$CAM_PASS != *[\&\?\#\ \"\'\\]* ]] || die "username/password contain & ? # @ : / % space quote or backslash - change the camera password first"
+[[ $CAM_USER$CAM_PASS != *[\&\?\#\ \"\'\\@:/%]* ]] || die "username/password contain & ? # @ : / % space quote or backslash - change the camera password first"
 
 # Credentials both as userinfo (digest auth - go2rtc needs it) and in the path (older XMEye firmware).
 main="rtsp://$CAM_USER:$CAM_PASS@$CAM_IP:554/user=$CAM_USER&password=$CAM_PASS&channel=1&stream=0.sdp?"
@@ -125,6 +125,6 @@ unset CAM_PASS main sub
 
 echo
 echo "OK - written $CFG (root only). Password is NOT shown here:"
-sed -E -e 's/password=[^&]*/password=*****/' -e 's#(rtsp://[^:]*):[^@]*@#:*****@#' "$CFG" | sed -n '/^go2rtc/,/^cameras/p'
+sed -E -e 's/password=[^&]*/password=*****/' -e 's#(rtsp://[^:]*):[^@]*@#\1:*****@#' "$CFG" | sed -n '/^go2rtc/,/^cameras/p'
 echo
 echo "Next: in Home Assistant -> Apps -> Frigate -> Start, then open the Log tab."
