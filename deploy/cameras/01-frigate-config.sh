@@ -54,6 +54,8 @@ sub="rtsp://$CAM_IP:554/user=$CAM_USER&password=$CAM_PASS&channel=1&stream=1.sdp
 umask 077
 cat > "$CFG" <<EOF
 # Written by deploy/cameras/01-frigate-config.sh - later managed by the alarm server.
+version: 0.18-0      # config schema version - stops Frigate from "migrating" this file
+
 mqtt:
   enabled: false
 

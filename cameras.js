@@ -370,6 +370,9 @@ function buildFrigateConfig(version) {
   }
 
   const config = {
+    // Frigate's config schema version (e.g. "0.18-0"); without it Frigate treats
+    // the file as old and runs its config migrations on it.
+    ...(v017 ? { version: `0.${minorOf(version)}-0` } : {}),
     mqtt: { enabled: false },
     // Event DB (and face metadata) on the encrypted disk, not the USB stick.
     database: { path: '/media/frigate/frigate.db' },
