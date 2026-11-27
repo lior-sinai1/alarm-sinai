@@ -12,8 +12,8 @@ android {
         applicationId   = "com.alarmsinai"
         minSdk          = 26
         targetSdk       = 34
-        versionCode     = 3
-        versionName     = "2.0.0"
+        versionCode     = 4
+        versionName     = "2.1.0"
         buildConfigField("String", "ALARM_API_KEY", "\"${rootProject.extra["alarmApiKey"]}\"")
     }
 
@@ -50,5 +50,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.coroutines.android)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.okhttp)
     wearApp(project(":wear"))
 }
