@@ -12,8 +12,8 @@ android {
         applicationId   = "com.alarmsinai"
         minSdk          = 26
         targetSdk       = 34
-        versionCode     = 4
-        versionName     = "2.1.0"
+        versionCode     = 5
+        versionName     = "2.1.1"
         buildConfigField("String", "ALARM_API_KEY", "\"${rootProject.extra["alarmApiKey"]}\"")
     }
 
