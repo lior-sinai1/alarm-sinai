@@ -75,6 +75,10 @@ fun ControlScreen(vm: AlarmViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         ConnectionBadge(connected = !error && status?.connected == true)
+        val lastError by vm.lastError.collectAsState()
+        lastError?.let { Text(it, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End) }
+        if (lastError == null && status != null && !status!!.connected)
+            Text("השרת לא מחובר לבקר (PLC)", fontSize = 11.sp, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
         StatusCard(status, breachedSensors, bypassedSensors, mw1Running, mw1)
         if (mw2Running) TimerRow(seconds = mw2)
         ZoneButtons(status, vm, alarm, armed)

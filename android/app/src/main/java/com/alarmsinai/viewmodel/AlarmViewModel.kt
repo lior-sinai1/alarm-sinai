@@ -26,6 +26,10 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     private val _connectionError = MutableStateFlow(false)
     val connectionError: StateFlow<Boolean> = _connectionError.asStateFlow()
 
+    /** Why the last poll failed (shown under the connection badge). */
+    private val _lastError = MutableStateFlow<String?>(null)
+    val lastError: StateFlow<String?> = _lastError.asStateFlow()
+
     // ── History ───────────────────────────────────────────────────────────────
     private val _history = MutableStateFlow<List<HistoryEvent>>(emptyList())
     val history: StateFlow<List<HistoryEvent>> = _history.asStateFlow()
@@ -68,11 +72,16 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
                     val s = repository.fetchStatus()
                     _status.value = s
                     _connectionError.value = false
+                    _lastError.value = null
                     failCount = 0
                     detectChanges(s)
                     delay(5_000)
-                } catch (_: Exception) {
+                } catch (e: Exception) {
                     _connectionError.value = true
+                    _lastError.value = when (e) {
+                        is retrofit2.HttpException -> "HTTP ${e.code()}"
+                        else -> e.javaClass.simpleName + (e.message?.let { ": " + it.take(60) } ?: "")
+                    }
                     failCount++
                     val retryDelay = when {
                         failCount <= 3  -> 2_000L
