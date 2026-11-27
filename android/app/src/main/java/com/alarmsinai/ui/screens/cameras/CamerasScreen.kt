@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material.icons.filled.Sd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -244,7 +245,8 @@ internal fun RotatePanel(
     onRotate: (Int) -> Unit,
     onTilt: (Double) -> Unit,
     onSave: (Int, Double) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showSave: Boolean = true
 ) {
     Card(modifier.fillMaxWidth().padding(8.dp)) {
         Column(Modifier.padding(12.dp)) {
@@ -256,7 +258,7 @@ internal fun RotatePanel(
             }
             Text("כיוונון עדין: %.1f°".format(tilt), fontSize = 12.sp)
             Slider(value = tilt.toFloat(), onValueChange = { onTilt(Math.round(it * 2) / 2.0) }, valueRange = -45f..45f)
-            Button(onClick = { onSave(rotation, tilt) }, modifier = Modifier.fillMaxWidth()) { Text("שמור למצלמה הזו") }
+            if (showSave) Button(onClick = { onSave(rotation, tilt) }, modifier = Modifier.fillMaxWidth()) { Text("שמור למצלמה הזו") }
         }
     }
 }

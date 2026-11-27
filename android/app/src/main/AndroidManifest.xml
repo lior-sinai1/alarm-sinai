@@ -73,6 +73,10 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name=".fcm.SirenStopReceiver"
+            android:exported="false" />
+
         <service
             android:name=".service.AlarmSoundService"
             android:foregroundServiceType="mediaPlayback"

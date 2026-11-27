@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -33,6 +34,8 @@ import com.alarmsinai.ui.screens.ControlScreen
 import com.alarmsinai.ui.screens.GeneratorScreen
 import com.alarmsinai.ui.screens.HistoryScreen
 import com.alarmsinai.ui.screens.SensorsScreen
+import com.alarmsinai.ui.screens.cameras.CamerasScreen
+import com.alarmsinai.viewmodel.CamerasViewModel
 import com.alarmsinai.ui.theme.AlarmSinaiTheme
 import com.alarmsinai.viewmodel.AlarmViewModel
 import com.google.firebase.messaging.FirebaseMessaging
@@ -40,6 +43,9 @@ import com.google.firebase.messaging.FirebaseMessaging
 class MainActivity : ComponentActivity() {
 
     private val vm: AlarmViewModel by viewModels()
+    private val camVm: CamerasViewModel by viewModels()
+    /** Set by an "intruder" notification: open the cameras tab (and the event, if any). */
+    private val openCameras = mutableStateOf<String?>(null)
     private var sirenJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,12 +62,29 @@ class MainActivity : ComponentActivity() {
         }
 
         FirebaseMessaging.getInstance().token.addOnSuccessListener { vm.registerFcmToken(it) }
+        handleIntent(intent)
 
         setContent {
             AlarmSinaiTheme {
-                AlarmApp(vm, ::playAlarmSound, ::stopAlarmSound)
+                AlarmApp(vm, camVm, openCameras, ::playAlarmSound, ::stopAlarmSound)
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent?) {
+        if (intent?.getStringExtra(EXTRA_OPEN_TAB) == TAB_CAMERAS)
+            openCameras.value = intent.getStringExtra(EXTRA_EVENT_ID) ?: ""
+    }
+
+    companion object {
+        const val EXTRA_OPEN_TAB = "open_tab"
+        const val EXTRA_EVENT_ID = "event_id"
+        const val TAB_CAMERAS = "cameras"
     }
 
     fun playAlarmSound() {
@@ -113,11 +136,14 @@ private val TABS = listOf(
     TabItem("היסטוריה",  Icons.Default.List),
     TabItem("חיישנים",   Icons.Default.Settings),
     TabItem("גנרטור",    Icons.Default.Bolt),
+    TabItem("מצלמות",    Icons.Default.Videocam),
 )
 
 @Composable
 private fun AlarmApp(
     vm: AlarmViewModel,
+    camVm: CamerasViewModel,
+    openCameras: MutableState<String?>,
     playAlarm: () -> Unit,
     stopAlarm: () -> Unit
 ) {
@@ -129,6 +155,13 @@ private fun AlarmApp(
     var selectedTab by remember { mutableIntStateOf(0) }
     var wasAlarm by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    LaunchedEffect(openCameras.value) {
+        val ev = openCameras.value ?: return@LaunchedEffect
+        selectedTab = 4
+        if (ev.isNotEmpty()) camVm.showEvent(ev)
+        openCameras.value = null
+    }
 
     // Local audio alert — bypasses silent/DND via USAGE_ALARM
     LaunchedEffect(status?.m19) {
@@ -166,7 +199,7 @@ private fun AlarmApp(
                 TABS.forEachIndexed { idx, tab ->
                     NavigationBarItem(
                         icon     = { Icon(tab.icon, contentDescription = tab.label) },
-                        label    = { Text(tab.label) },
+                        label    = { Text(tab.label, maxLines = 1) },
                         selected = selectedTab == idx,
                         onClick  = { selectedTab = idx }
                     )
@@ -180,6 +213,7 @@ private fun AlarmApp(
                 1 -> HistoryScreen(vm = vm)
                 2 -> SensorsScreen(vm = vm)
                 3 -> GeneratorScreen(vm = vm)
+                4 -> CamerasScreen(vm = camVm)
             }
         }
     }

@@ -16,7 +16,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/** server.js /cameras/* — snapshots and video are fetched as raw URLs, not through this. */
+/** server.js /cameras/... — snapshots and video are fetched as raw URLs, not through this. */
 interface CameraApi {
     @GET("cameras/")
     suspend fun overview(): CamerasOverview

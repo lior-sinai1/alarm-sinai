@@ -18,7 +18,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 /**
- * Talks to server.js /cameras/*. Video is heavy, so the route is chosen per use:
+ * Talks to server.js /cameras/.... Video is heavy, so the route is chosen per use:
  *   1. home LAN  (direct to the Mini PC, no tunnel, fastest)
  *   2. Tailscale (remote viewing, if an address was set in the app)
  *   3. ngrok     (same address as the alarm — works everywhere but has a monthly data cap)

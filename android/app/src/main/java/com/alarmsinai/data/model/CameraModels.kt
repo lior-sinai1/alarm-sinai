@@ -1,6 +1,6 @@
 package com.alarmsinai.data.model
 
-// Mirrors the JSON of server.js /cameras/* (cameras.js).
+// Mirrors the JSON of server.js /cameras/... (cameras.js).
 
 data class CamerasOverview(
     val ok: Boolean = false,
